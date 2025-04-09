@@ -1,0 +1,52 @@
+{
+  "name": "teacher-app-backend",
+  "version": "1.0.0",
+  "description": "Backend server for Teacher App and Grades application",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "setup-db": "psql -U postgres -d lca -f schema.sql",
+    "setup-db-direct": "psql -U postgres -d lca -f schema-direct.sql",
+    "create-db": "psql -U postgres -c 'CREATE DATABASE lca;'",
+    "init-db": "node init-db.js",
+    "test-db": "node check-tables.js",
+    "db-tools": "node db-backup-restore.js",
+    "db-backup": "node db-backup-restore.js backup",
+    "db-restore": "node db-backup-restore.js restore",
+    "db-list-backups": "node db-backup-restore.js list",
+    "set-default-passwords": "node set-default-passwords.js",
+    "check-server": "node check-server.js",
+    "fix-frontend": "node fix-frontend-auth.js",
+    "fix-auth": "node fix-auth.js",
+    "setup-hybrid-auth": "node hybrid-auth.js",
+    "add-firebase-column": "node add-firebase-column.js",
+    "test-hybrid-auth": "node test-hybrid-auth.js",
+    "integrate-hybrid-auth": "node integrate-hybrid-auth.js",
+    "setup-firebase": "node setup-firebase.js",
+    "migrate-to-firebase": "node migrate-users-to-firebase.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@firebase/auth": "^1.6.0",
+    "bcrypt": "^5.1.1",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.18.2",
+    "firebase": "^11.4.0",
+    "firebase-admin": "^13.2.0",
+    "joi": "^17.13.3",
+    "jsonwebtoken": "^9.0.2",
+    "node-fetch": "^2.7.0",
+    "nodemailer": "^6.10.0",
+    "pg": "^8.11.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}

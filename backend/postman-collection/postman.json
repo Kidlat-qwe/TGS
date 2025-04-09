@@ -1,0 +1,1558 @@
+{
+    "info": {
+      "name": "Token Generation System API",
+      "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+      {
+        "name": "Token Generation System",
+        "item": [ 
+          {
+            "name": "Admin Login",
+            "request": {
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/login",
+                "host": ["{{base_url}}"],
+                "path": ["api", "login"]
+              },
+              "body": {
+                "mode": "raw",
+                "raw": "{\n    \"email\": \"your-email@example.com\",\n    \"password\": \"your-password\"\n}"
+              }
+            }
+          },
+          {
+            "name": "Generate API Token (Evaluation)",
+            "request": {
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{admin_token}}"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/generate-token",
+                "host": ["{{base_url}}"],
+                "path": ["api", "generate-token"]
+              },
+              "body": {
+                "mode": "raw",
+                "raw": "{\n    \"description\": \"Token for evaluation system\",\n    \"expiration\": \"30d\",\n    \"userType\": \"qa\",\n    \"system\": \"evaluation\"\n}"
+              }
+            }
+          },
+          {
+            "name": "Generate API Token (Grading)",
+            "request": {
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{admin_token}}"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/generate-token",
+                "host": ["{{base_url}}"],
+                "path": ["api", "generate-token"]
+              },
+              "body": {
+                "mode": "raw",
+                "raw": "{\n    \"description\": \"Token for grading system\",\n    \"expiration\": \"30d\",\n    \"userType\": \"admin\",\n    \"system\": \"grading\"\n}"
+              }
+            }
+          },
+          {
+            "name": "Update Token System",
+            "request": {
+              "method": "PUT",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{admin_token}}"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/tokens/:id/system",
+                "host": ["{{base_url}}"],
+                "path": ["api", "tokens", ":id", "system"],
+                "variable": [
+                  {
+                    "key": "id",
+                    "value": "token-id"
+                  }
+                ]
+              },
+              "body": {
+                "mode": "raw",
+                "raw": "{\n    \"system\": \"grading\"\n}"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "Evaluation System",
+        "item": [
+          {
+            "name": "Auth",
+            "item": [
+              {
+                "name": "Register User",
+                "request": {
+                  "method": "POST",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/evaluation/auth/register",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "evaluation", "auth", "register"]
+                  },
+                  "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"email\": \"user@example.com\",\n    \"password\": \"password123\",\n    \"name\": \"User Name\"\n}"
+                  }
+                }
+              },
+              {
+                "name": "Login User",
+                "request": {
+                  "method": "POST",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/evaluation/auth/login",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "evaluation", "auth", "login"]
+                  },
+                  "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"email\": \"user@example.com\",\n    \"password\": \"password123\"\n}"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "Users",
+            "item": [
+              {
+                "name": "Get All Users",
+                "request": {
+                  "method": "GET",
+                  "header": [
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{evaluation_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/evaluation/users",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "evaluation", "users"]
+                  }
+                }
+              },
+              {
+                "name": "Get Users by Type",
+                "request": {
+                  "method": "GET",
+                  "header": [
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{evaluation_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/evaluation/users/by-type?userType=qa",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "evaluation", "users", "by-type"],
+                    "query": [
+                      {
+                        "key": "userType",
+                        "value": "qa"
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "name": "Get User Profile",
+                "request": {
+                  "method": "GET",
+                  "header": [
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{evaluation_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/evaluation/users/profile",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "evaluation", "users", "profile"]
+                  }
+                }
+              },
+              {
+                "name": "Update User",
+                "request": {
+                  "method": "PUT",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    },
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{evaluation_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/evaluation/users/1",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "evaluation", "users", "1"]
+                  },
+                  "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"name\": \"Updated Name\",\n    \"currentPassword\": \"current-password\",\n    \"newPassword\": \"new-password\"\n}"
+                  }
+                }
+              },
+              {
+                "name": "Delete User",
+                "request": {
+                  "method": "DELETE",
+                  "header": [
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{evaluation_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/evaluation/users/1",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "evaluation", "users", "1"]
+                  }
+                }
+              },
+              {
+                "name": "Update User Type",
+                "request": {
+                  "method": "PUT",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    },
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{evaluation_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/evaluation/users/1/type",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "evaluation", "users", "1", "type"]
+                  },
+                  "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"userType\": \"qa\"\n}"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "Evaluations",
+            "item": [
+              {
+                "name": "Get All Evaluations",
+                "request": {
+                  "method": "GET",
+                  "header": [
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{evaluation_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/evaluation/evaluations",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "evaluation", "evaluations"]
+                  }
+                }
+              },
+              {
+                "name": "Submit Evaluation",
+                "request": {
+                  "method": "POST",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    },
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{evaluation_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/evaluation/evaluations",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "evaluation", "evaluations"]
+                  },
+                  "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"teacherId\": \"teacher@example.com\",\n    \"teacherName\": \"Teacher Name\",\n    \"templateId\": \"template-id\",\n    \"templateName\": \"Template Name\",\n    \"overallRating\": 4.5,\n    \"feedback\": \"Great performance\",\n    \"criteriaRatings\": {},\n    \"classCode\": \"CLASS001\",\n    \"filename\": \"video.mp4\",\n    \"evaluationType\": \"video\",\n    \"qa_evaluator\": \"evaluator@example.com\",\n    \"qa_evaluator_name\": \"Evaluator Name\"\n}"
+                  }
+                }
+              },
+              {
+                "name": "Get Evaluation by ID",
+                "request": {
+                  "method": "GET",
+                  "header": [
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{evaluation_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/evaluation/evaluations/:id",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "evaluation", "evaluations", ":id"],
+                    "variable": [
+                      {
+                        "key": "id",
+                        "value": "evaluation-id"
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "name": "Get Evaluations by Teacher ID",
+                "request": {
+                  "method": "GET",
+                  "header": [
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{evaluation_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/evaluation/evaluations/teacher/:teacherId",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "evaluation", "evaluations", "teacher", ":teacherId"],
+                    "variable": [
+                      {
+                        "key": "teacherId",
+                        "value": "teacher@example.com"
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "Index",
+            "item": [
+              {
+                "name": "Get API Status",
+                "request": {
+                  "method": "GET",
+                  "header": [],
+                  "url": {
+                    "raw": "{{base_url}}/api/evaluation",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "evaluation"]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "QA",
+            "item": [
+              {
+                "name": "Get QA Evaluations",
+                "request": {
+                  "method": "GET",
+                  "header": [
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{evaluation_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/evaluation/qa/evaluations",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "evaluation", "qa", "evaluations"]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "Videos",
+            "item": [
+              {
+                "name": "Upload Video",
+                "request": {
+                  "method": "POST",
+                  "header": [
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{evaluation_token}}"
+                    }
+                  ],
+                  "body": {
+                    "mode": "formdata",
+                    "formdata": [
+                      {
+                        "key": "video",
+                        "type": "file",
+                        "src": "/path/to/video.mp4"
+                      },
+                      {
+                        "key": "teacherId",
+                        "value": "teacher@example.com",
+                        "type": "text"
+                      }
+                    ]
+                  },
+                  "url": {
+                    "raw": "{{base_url}}/api/evaluation/videos/upload",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "evaluation", "videos", "upload"]
+                  }
+                }
+              },
+              {
+                "name": "Get Video",
+                "request": {
+                  "method": "GET",
+                  "header": [
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{evaluation_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/evaluation/videos/:filename",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "evaluation", "videos", ":filename"],
+                    "variable": [
+                      {
+                        "key": "filename",
+                        "value": "video.mp4"
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "name": "List Videos",
+                "request": {
+                  "method": "GET",
+                  "header": [
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{evaluation_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/evaluation/videos",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "evaluation", "videos"]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Grading System",
+        "item": [
+          {
+            "name": "Auth",
+            "item": [
+              {
+                "name": "Login",
+                "request": {
+                  "method": "POST",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/grading/auth/login",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "grading", "auth", "login"]
+                  },
+                  "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"username\": \"user@example.com\",\n    \"password\": \"password123\"\n}"
+                  }
+                }
+              },
+              {
+                "name": "Create Test User",
+                "request": {
+                  "method": "POST",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/grading/auth/create-test-user",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "grading", "auth", "create-test-user"]
+                  },
+                  "body": {
+                    "mode": "raw",
+                    "raw": "{}"
+                  }
+                }
+              },
+              {
+                "name": "Verify Token",
+                "request": {
+                  "method": "POST",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/grading/auth/verify-token",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "grading", "auth", "verify-token"]
+                  },
+                  "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"token\": \"{{grading_token}}\"\n}"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "Users",
+            "item": [
+              {
+                "name": "Get All Users",
+                "request": {
+                  "method": "GET",
+                  "header": [
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{grading_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/grading/users?page=1&limit=10",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "grading", "users"],
+                    "query": [
+                      {
+                        "key": "page",
+                        "value": "1"
+                      },
+                      {
+                        "key": "limit",
+                        "value": "10"
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "name": "Get User Profile",
+                "request": {
+                  "method": "GET",
+                  "header": [
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{grading_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/grading/users/profile",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "grading", "users", "profile"]
+                  }
+                }
+              },
+              {
+                "name": "Create User",
+                "request": {
+                  "method": "POST",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    },
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{grading_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/grading/users",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "grading", "users"]
+                  },
+                  "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"email\": \"newuser@example.com\",\n    \"fname\": \"New\",\n    \"lname\": \"User\",\n    \"user_type\": \"teacher\",\n    \"teacher_status\": true\n}"
+                  }
+                }
+              },
+              {
+                "name": "Get User by ID",
+                "request": {
+                  "method": "GET",
+                  "header": [
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{grading_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/grading/users/:userId",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "grading", "users", ":userId"],
+                    "variable": [
+                      {
+                        "key": "userId",
+                        "value": "1"
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "name": "Get User by Firebase UID",
+                "request": {
+                  "method": "GET",
+                  "header": [
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{grading_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/grading/users/firebase/:firebaseUid",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "grading", "users", "firebase", ":firebaseUid"],
+                    "variable": [
+                      {
+                        "key": "firebaseUid",
+                        "value": "firebase-uid"
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "name": "Get User by Email",
+                "request": {
+                  "method": "GET",
+                  "header": [
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{grading_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/grading/users/byEmail/:email",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "grading", "users", "byEmail", ":email"],
+                    "variable": [
+                      {
+                        "key": "email",
+                        "value": "user@example.com"
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "name": "Update User",
+                "request": {
+                  "method": "PUT",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    },
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{grading_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/grading/users/:userId",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "grading", "users", ":userId"],
+                    "variable": [
+                      {
+                        "key": "userId",
+                        "value": "1"
+                      }
+                    ]
+                  },
+                  "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"fname\": \"Updated\",\n    \"lname\": \"Name\",\n    \"user_type\": \"admin\",\n    \"teacher_status\": true\n}"
+                  }
+                }
+              },
+              {
+                "name": "Delete User",
+                "request": {
+                  "method": "DELETE",
+                  "header": [
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{grading_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/grading/users/:userId",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "grading", "users", ":userId"],
+                    "variable": [
+                      {
+                        "key": "userId",
+                        "value": "1"
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "Activities",
+            "item": [
+              {
+                "name": "Get All Activities",
+                "request": {
+                  "method": "GET",
+                  "header": [
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{grading_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/grading/activities",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "grading", "activities"]
+                  }
+                }
+              },
+              {
+                "name": "Create Activity",
+                "request": {
+                  "method": "POST",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    },
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{grading_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/grading/activities",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "grading", "activities"]
+                  },
+                  "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"name\": \"Quiz 1\",\n    \"description\": \"First quiz of the quarter\",\n    \"classId\": 1,\n    \"subjectId\": 11,\n    \"quarter\": 1,\n    \"activityType\": \"written_works\",\n    \"maxScore\": 100,\n    \"dateGiven\": \"2023-07-15T00:00:00.000Z\"\n}"
+                  }
+                }
+              },
+              {
+                "name": "Get Activity by ID",
+                "request": {
+                  "method": "GET",
+                  "header": [
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{grading_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/grading/activities/:activityId",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "grading", "activities", ":activityId"],
+                    "variable": [
+                      {
+                        "key": "activityId",
+                        "value": "1"
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "name": "Update Activity",
+                "request": {
+                  "method": "PUT",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    },
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{grading_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/grading/activities/:activityId",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "grading", "activities", ":activityId"],
+                    "variable": [
+                      {
+                        "key": "activityId",
+                        "value": "1"
+                      }
+                    ]
+                  },
+                  "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"name\": \"Updated Quiz\",\n    \"description\": \"Updated description\",\n    \"maxScore\": 50,\n    \"dateGiven\": \"2023-07-20T00:00:00.000Z\"\n}"
+                  }
+                }
+              },
+              {
+                "name": "Delete Activity",
+                "request": {
+                  "method": "DELETE",
+                  "header": [
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{grading_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/grading/activities/:activityId",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "grading", "activities", ":activityId"],
+                    "variable": [
+                      {
+                        "key": "activityId",
+                        "value": "1"
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "Attendance",
+            "item": [
+              {
+                "name": "Get Attendance Records",
+                "request": {
+                  "method": "GET",
+                  "header": [
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{grading_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/grading/attendance?classId=1&date=2023-08-01",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "grading", "attendance"],
+                    "query": [
+                      {
+                        "key": "classId",
+                        "value": "1"
+                      },
+                      {
+                        "key": "date",
+                        "value": "2023-08-01"
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "name": "Record Attendance",
+                "request": {
+                  "method": "POST",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    },
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{grading_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/grading/attendance",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "grading", "attendance"]
+                  },
+                  "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"classId\": 1,\n    \"date\": \"2023-08-01\",\n    \"attendanceRecords\": [\n        {\n            \"studentId\": 1,\n            \"status\": \"present\"\n        },\n        {\n            \"studentId\": 2,\n            \"status\": \"absent\"\n        }\n    ]\n}"
+                  }
+                }
+              }
+            ]
+              },
+              {
+            "name": "Classes",
+            "item": [
+              {
+                "name": "Get All Classes",
+                "request": {
+                  "method": "GET",
+                  "header": [
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{grading_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/grading/classes",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "grading", "classes"]
+                  }
+                }
+              },
+              {
+                "name": "Create Class",
+                "request": {
+                  "method": "POST",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    },
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{grading_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/grading/classes",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "grading", "classes"]
+                  },
+                  "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"name\": \"Class 3-A\",\n    \"section\": \"Section A\",\n    \"grade_level\": 3,\n    \"adviser_id\": 5,\n    \"school_year_id\": 1\n}"
+                  }
+                }
+              },
+              {
+                "name": "Get Class by ID",
+                "request": {
+                  "method": "GET",
+                  "header": [
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{grading_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/grading/classes/:classId",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "grading", "classes", ":classId"],
+                    "variable": [
+                      {
+                        "key": "classId",
+                        "value": "1"
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "name": "Get Students by Class",
+                "request": {
+                  "method": "GET",
+                  "header": [
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{grading_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/grading/classes/:classId/students",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "grading", "classes", ":classId", "students"],
+                    "variable": [
+                      {
+                        "key": "classId",
+                        "value": "1"
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "Grades",
+            "item": [
+              {
+                "name": "Get All Grades",
+                "request": {
+                  "method": "GET",
+                  "header": [
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{grading_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/grading/grades",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "grading", "grades"]
+                  }
+                }
+              },
+              {
+                "name": "Get Student Grades",
+                "request": {
+                  "method": "GET",
+                  "header": [
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{grading_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/grading/grades/student/:studentId",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "grading", "grades", "student", ":studentId"],
+                    "variable": [
+                      {
+                        "key": "studentId",
+                        "value": "1"
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "Grading Criteria",
+            "item": [
+              {
+                "name": "Get All Grading Criteria",
+                "request": {
+                  "method": "GET",
+                  "header": [
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{grading_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/grading/criteria/all",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "grading", "criteria", "all"]
+                  }
+                }
+              },
+              {
+                "name": "Get Grading Criteria by Query Parameters",
+                "request": {
+                  "method": "GET",
+                  "header": [
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{grading_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/grading/criteria?subjectId=11&schoolYearId=1",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "grading", "criteria"],
+                    "query": [
+                      {
+                        "key": "subjectId",
+                        "value": "11"
+                      },
+                      {
+                        "key": "schoolYearId",
+                        "value": "1"
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "name": "Get Grading Criteria by URL Parameters",
+                "request": {
+                  "method": "GET",
+                  "header": [
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{grading_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/grading/criteria/:subjectId/:schoolYearId",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "grading", "criteria", ":subjectId", ":schoolYearId"],
+                    "variable": [
+                      {
+                        "key": "subjectId",
+                        "value": "11"
+                      },
+                      {
+                        "key": "schoolYearId",
+                        "value": "1"
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "name": "Create Grading Criteria",
+                "request": {
+                  "method": "POST",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    },
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{grading_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/grading/criteria",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "grading", "criteria"]
+                  },
+                  "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"written_works_percentage\": 30,\n    \"performance_tasks_percentage\": 40,\n    \"quarterly_assessment_percentage\": 30,\n    \"subjectId\": 11,\n    \"schoolYearId\": 1\n}"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "School Years",
+            "item": [
+              {
+                "name": "Get All School Years",
+                "request": {
+                  "method": "GET",
+                  "header": [
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{grading_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/grading/school-years",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "grading", "school-years"]
+                  }
+                }
+              },
+              {
+                "name": "Create School Year",
+                "request": {
+                  "method": "POST",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    },
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{grading_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/grading/school-years",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "grading", "school-years"]
+                  },
+                  "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"schoolYear\": \"2023-2024\",\n    \"isActive\": true\n}"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "Student Status",
+            "item": [
+              {
+                "name": "Get Student Status",
+                "request": {
+                  "method": "GET",
+                  "header": [
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{grading_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/grading/student-status?studentId=1",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "grading", "student-status"],
+                    "query": [
+                      {
+                        "key": "studentId",
+                        "value": "1"
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "name": "Update Student Status",
+                "request": {
+                  "method": "PUT",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    },
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{grading_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/grading/student-status/:studentId",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "grading", "student-status", ":studentId"],
+                    "variable": [
+                      {
+                        "key": "studentId",
+                        "value": "1"
+                      }
+                    ]
+                  },
+                  "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"status\": \"active\"\n}"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "Students",
+            "item": [
+              {
+                "name": "Get All Students",
+                "request": {
+                  "method": "GET",
+                  "header": [
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{grading_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/grading/students",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "grading", "students"]
+                  }
+                }
+              },
+              {
+                "name": "Get Student by ID",
+                "request": {
+                  "method": "GET",
+                  "header": [
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{grading_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/grading/students/:studentId",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "grading", "students", ":studentId"],
+                    "variable": [
+                      {
+                        "key": "studentId",
+                        "value": "1"
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "name": "Create Student",
+                "request": {
+                  "method": "POST",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    },
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{grading_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/grading/students",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "grading", "students"]
+                  },
+                  "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"firstName\": \"John\",\n    \"lastName\": \"Doe\",\n    \"classId\": 1\n}"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "Subjects",
+            "item": [
+              {
+                "name": "Get All Subjects",
+                "request": {
+                  "method": "GET",
+                  "header": [
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{grading_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/grading/subjects",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "grading", "subjects"]
+                  }
+                }
+              },
+              {
+                "name": "Create Subject",
+                "request": {
+                  "method": "POST",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    },
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{grading_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/grading/subjects",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "grading", "subjects"]
+                  },
+                  "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"subjectName\": \"Mathematics\"\n}"
+                  }
+                }
+              },
+              {
+                "name": "Get Subject by Name",
+                "request": {
+                  "method": "GET",
+                  "header": [
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{grading_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/grading/subjects/by-name/:subjectName",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "grading", "subjects", "by-name", ":subjectName"],
+                    "variable": [
+                      {
+                        "key": "subjectName",
+                        "value": "Mathematics"
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "Teachers",
+            "item": [
+              {
+                "name": "Get All Teachers",
+                "request": {
+                  "method": "GET",
+                  "header": [
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{grading_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/grading/teachers",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "grading", "teachers"]
+                  }
+                }
+              },
+              {
+                "name": "Get Teacher by ID",
+                "request": {
+                  "method": "GET",
+                  "header": [
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{grading_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/grading/teachers/:teacherId",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "grading", "teachers", ":teacherId"],
+                    "variable": [
+                      {
+                        "key": "teacherId",
+                        "value": "1"
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "name": "Get Teacher Classes",
+                "request": {
+                  "method": "GET",
+                  "header": [
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{grading_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/grading/teachers/:teacherId/classes",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "grading", "teachers", ":teacherId", "classes"],
+                    "variable": [
+                      {
+                        "key": "teacherId",
+                        "value": "1"
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "name": "Get Teacher Class Subjects",
+                "request": {
+                  "method": "GET",
+                  "header": [
+                    {
+                      "key": "Authorization",
+                      "value": "Bearer {{grading_token}}"
+                    }
+                  ],
+                  "url": {
+                    "raw": "{{base_url}}/api/grading/teachers/:teacherId/class/:classId/subjects",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "grading", "teachers", ":teacherId", "class", ":classId", "subjects"],
+                    "variable": [
+                      {
+                        "key": "teacherId",
+                        "value": "1"
+                      },
+                      {
+                        "key": "classId",
+                        "value": "1"
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "variable": [
+      {
+        "key": "base_url",
+        "value": "http://localhost:5000",
+        "type": "string"
+      },
+      {
+        "key": "admin_token",
+        "value": "your-admin-token",
+        "type": "string"
+      },
+      {
+        "key": "evaluation_token",
+        "value": "your-evaluation-system-token",
+        "type": "string"
+      },
+      {
+        "key": "grading_token",
+        "value": "your-grading-system-token",
+        "type": "string"
+      }
+    ]
+  }

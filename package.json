@@ -1,0 +1,42 @@
+{
+  "name": "token-system",
+  "version": "1.0.0",
+  "description": "Token Generating System with External Authentication for Evaluation and Grading Systems",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "npm run start:backend",
+    "start:frontend": "cd frontend && npm run dev",
+    "start:backend": "cd backend && node server.js",
+    "dev": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
+    "build": "cd frontend && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install",
+    "lint": "cd frontend && npm run lint"
+  },
+  "dependencies": {
+    "concurrently": "^8.2.2",
+    "git": "^0.1.5",
+    "init": "^0.1.2"
+  },
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "author": "",
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/token-system.git"
+  },
+  "keywords": [
+    "token",
+    "authentication",
+    "jwt",
+    "evaluation",
+    "grading"
+  ]
+}

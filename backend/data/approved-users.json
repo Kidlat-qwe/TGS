@@ -1,0 +1,38 @@
+[
+  {
+    "email": "admin@gmail.com",
+    "password": "password123",
+    "role": "admin"
+  },
+  {
+    "email": "mjtamayo0703@gmail.com",
+    "password": "admin123",
+    "role": "admin",
+    "uid": "O0Kf7VxZbQSTBAdAkrSZz4OPGrx1",
+    "approvedAt": "2025-03-24T06:48:02.945Z",
+    "accessType": "unlimited",
+    "systemAccess": "both",
+    "expiresAt": null
+  },
+  {
+    "email": "paulcamus11@gmail.com",
+    "password": "user123",
+    "role": "user",
+    "uid": "HC3CG1tg7ndvs6Ix3TNSYvkEauk1",
+    "approvedAt": "2025-04-07T02:59:27.559Z",
+    "accessType": "unlimited",
+    "systemAccess": "grading",
+    "expiresAt": null
+  },
+  {
+    "email": "ericbob@gmail.com",
+    "password": "user123",
+    "role": "user",
+    "uid": "zgo7Lt1PuwRd7tOs34IJUdR4yBh1",
+    "approvedAt": "2025-04-07T05:16:58.552Z",
+    "accessType": "trial",
+    "systemAccess": "evaluation",
+    "expiresAt": "2025-04-10T06:53:41.775Z",
+    "updatedAt": "2025-04-09T06:53:41.776Z"
+  }
+]
