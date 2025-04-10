@@ -161,7 +161,21 @@ global.savePersistentData = savePersistentData;
 // ===== APP CONFIGURATION =====
 
 const app = express();
-const PORT = process.env.PORT || 5000; // Use environment variable PORT with fallback to 5000
+
+// Get PORT dynamically from environment variables
+// For Render and other cloud platforms, we need to use their PORT environment variable
+let PORT = process.env.PORT;
+
+// If we're in a Render environment, ensure we're using their PORT
+if (process.env.RENDER && !PORT) {
+  console.warn('⚠️ No PORT environment variable found but running on Render! Using default 10000.');
+  PORT = 10000; // Render's common default port
+} else if (!PORT) {
+  // Local development default
+  PORT = 5000;
+}
+
+console.log(`🔌 Using PORT: ${PORT} (source: ${process.env.PORT ? 'environment variable' : 'default value'})`);
 
 // Maximum number of connection retries
 const MAX_RETRIES = 5;
@@ -297,7 +311,17 @@ app.use('/api/grading/student-status', gradingAuthMiddleware, gradingStudentStat
 
 // ===== UTILITY ROUTES =====
 
-// Health check endpoint
+// Public health check endpoint (no auth required)
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    port: PORT
+  });
+});
+
+// Health check endpoint with admin auth
 app.get('/api/health', verifyAdmin, (req, res) => {
   res.json({ 
     status: 'ok', 
@@ -485,43 +509,90 @@ if (isProduction) {
 
 // ===== SERVER STARTUP =====
 
+// Test if port is available
+function isPortAvailable(port) {
+  return new Promise((resolve, reject) => {
+    const tester = http.createServer()
+      .once('error', err => {
+        if (err.code === 'EADDRINUSE') {
+          console.log(`❌ Port ${port} is already in use`);
+          resolve(false);
+        } else {
+          reject(err);
+        }
+      })
+      .once('listening', () => {
+        tester.once('close', () => resolve(true))
+          .close();
+      })
+      .listen(port, '0.0.0.0');
+  });
+}
+
 // Log configured port
 console.log(`\n📡 Attempting to start server on port ${PORT} (from environment: ${process.env.PORT || 'not set, using default'})`);
+console.log(`\n💻 Running in environment: ${process.env.NODE_ENV || 'development'}`);
+console.log(`\n🔍 Render deployment: ${process.env.RENDER ? 'Yes' : 'No'}`);
 
 // Create server instance
-try {
-  const server = app.listen(PORT, () => {
-    console.log(`\n✨ Server running on port ${PORT}`);
-    console.log('\n🏫 EDUCATION MANAGEMENT SYSTEM');
-    console.log('----------------------------');
-    console.log('📊 Grading System: Available');
-    console.log('📝 Evaluation System: Available');
-    console.log('🔐 Authentication Services: Configured and ready');
-    console.log('\n👉 Use /api/routes endpoint to view all available API routes (admin only)');
-    console.log('👉 Nodemailer configured for email notifications');
-    console.log('\n⚡ Server is ready to accept connections!');
-  });
-
-  // Handle server events
-  server.on('error', (error) => {
-    console.error('\n❌ SERVER ERROR:', error);
-    if (error.code === 'EADDRINUSE') {
-      console.error(`Port ${PORT} is already in use. Please try a different port or stop the other process.`);
+async function startServer() {
+  try {
+    // Test if port is available first
+    const portAvailable = await isPortAvailable(PORT);
+    if (!portAvailable) {
+      console.warn(`⚠️ Port ${PORT} is not available. Will try to start server anyway, but it might fail.`);
     }
-  });
 
-  // Handle global unhandled exceptions
-  process.on('uncaughtException', (error) => {
-    console.error('\n❌ UNHANDLED EXCEPTION:', error);
-    console.log('The server will continue running, but you should fix this error.');
-  });
+    // For cloud platforms like Render, we need to listen on 0.0.0.0
+    const HOST = process.env.HOST || '0.0.0.0';
+    
+    const server = app.listen(PORT, HOST, () => {
+      console.log(`\n✨ Server running at http://${HOST}:${PORT}`);
+      console.log('\n🏫 EDUCATION MANAGEMENT SYSTEM');
+      console.log('----------------------------');
+      console.log('📊 Grading System: Available');
+      console.log('📝 Evaluation System: Available');
+      console.log('🔐 Authentication Services: Configured and ready');
+      console.log('\n👉 Use /api/routes endpoint to view all available API routes (admin only)');
+      console.log('👉 Nodemailer configured for email notifications');
+      console.log('\n⚡ Server is ready to accept connections!');
+    });
 
-  // Handle global unhandled promise rejections
-  process.on('unhandledRejection', (reason, promise) => {
-    console.error('\n❌ UNHANDLED PROMISE REJECTION:', reason);
-    console.log('The server will continue running, but you should fix this error.');
-  });
-} catch (error) {
-  console.error('\n❌ FATAL ERROR starting server:', error);
-  console.log('Unable to start the server due to the above error.');
+    // Handle server events
+    server.on('error', (error) => {
+      console.error('\n❌ SERVER ERROR:', error);
+      if (error.code === 'EADDRINUSE') {
+        console.error(`Port ${PORT} is already in use. Please try a different port or stop the other process.`);
+      } else if (error.code === 'EACCES') {
+        console.error(`Port ${PORT} requires elevated privileges. Try using a port number > 1024.`);
+      } else {
+        console.error(`Error starting server: ${error.message}`);
+      }
+    });
+
+    // Log when server is listening
+    server.on('listening', () => {
+      const addr = server.address();
+      const bind = typeof addr === 'string' ? `pipe ${addr}` : `port ${addr.port}`;
+      console.log(`⚡ Listening on ${bind} (${addr.address})`);
+    });
+
+    // Handle global unhandled exceptions
+    process.on('uncaughtException', (error) => {
+      console.error('\n❌ UNHANDLED EXCEPTION:', error);
+      console.log('The server will continue running, but you should fix this error.');
+    });
+
+    // Handle global unhandled promise rejections
+    process.on('unhandledRejection', (reason, promise) => {
+      console.error('\n❌ UNHANDLED PROMISE REJECTION:', reason);
+      console.log('The server will continue running, but you should fix this error.');
+    });
+  } catch (error) {
+    console.error('\n❌ FATAL ERROR starting server:', error);
+    console.log('Unable to start the server due to the above error.');
+  }
 }
+
+// Start the server
+startServer();
