@@ -15,8 +15,9 @@
     "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install",
     "lint": "cd frontend && npm run lint",
     "generate-env-template": "node backend/generate-env-template.js",
-    "render:start": "cd backend && node render-server.js",
-    "render:build": "npm install && cd frontend && npm install && npm run build"
+    "render:start": "cd backend && node render-prestart.js && node render-server.js",
+    "render:build": "npm install && cd frontend && npm install && npm run build",
+    "render:diagnostic": "cd backend && node render-diagnostic.js"
   },
   "dependencies": {
     "concurrently": "^8.2.2",

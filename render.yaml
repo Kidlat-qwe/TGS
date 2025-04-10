@@ -11,4 +11,4 @@ services:
       - key: RENDER
         value: true
     healthCheckPath: /health
-    healthCheckPort: 5000  # Explicitly set health check port to 5000 
+    # Remove healthCheckPort so Render uses the same port as the application 
