@@ -10,12 +10,12 @@
  * If no backend URL is provided, it defaults to https://token-system-api.onrender.com
  */
 
-const https = require('https');
-const http = require('http');
-const { URL } = require('url');
-const dns = require('dns');
-const net = require('net');
-const { performance } = require('perf_hooks');
+import https from 'https';
+import http from 'http';
+import { URL } from 'url';
+import dns from 'dns';
+import net from 'net';
+import { performance } from 'perf_hooks';
 
 // Default backend URL if not provided as argument
 const DEFAULT_BACKEND_URL = 'https://token-system-api.onrender.com';
