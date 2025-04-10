@@ -19,6 +19,10 @@ console.log(`- NODE_ENV: ${process.env.NODE_ENV || 'development'}`);
 console.log(`- BACKEND_URL: ${BACKEND_URL}`);
 console.log(`- __dirname: ${__dirname}`);
 
+// Add JSON body parser middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 // Enable CORS with more options
 app.use(cors({
   origin: '*',
@@ -40,16 +44,62 @@ app.use((req, res, next) => {
   next();
 });
 
-// Create API proxy middleware with error handling
+// Create API proxy middleware with enhanced error handling
 const apiProxy = createProxyMiddleware({
   target: BACKEND_URL,
   changeOrigin: true,
+  secure: false, // Don't verify SSL certificates
   pathRewrite: {
     '^/api': '/api' // Keep the /api prefix when forwarding
   },
   logLevel: 'debug', // More detailed logging
   onProxyReq: (proxyReq, req, res) => {
-    console.log(`Proxying ${req.method} ${req.url} to ${BACKEND_URL}/api${req.url}`);
+    // Log the headers we're sending to the backend
+    console.log(`Proxying ${req.method} ${req.url} to ${BACKEND_URL}${req.url}`);
+    
+    // Add potential authentication headers
+    // Uncomment and adjust if your backend requires authentication
+    // proxyReq.setHeader('Authorization', 'Bearer your-token-here');
+    
+    // Copy authentication headers from client if present
+    if (req.headers.authorization) {
+      console.log('Forwarding Authorization header from client');
+      proxyReq.setHeader('Authorization', req.headers.authorization);
+    }
+    
+    // Log request details for debugging
+    console.log('Request headers:', JSON.stringify(req.headers, null, 2));
+    
+    // If there's a body, log it (useful for debugging)
+    if (req.body) {
+      console.log('Request body:', JSON.stringify(req.body, null, 2));
+    }
+  },
+  onProxyRes: (proxyRes, req, res) => {
+    // Log the response status code from the backend
+    console.log(`Backend responded with status: ${proxyRes.statusCode} for ${req.method} ${req.url}`);
+    
+    // For error responses, log more details
+    if (proxyRes.statusCode >= 400) {
+      console.log('Response headers:', JSON.stringify(proxyRes.headers, null, 2));
+      
+      // Capture the response body for error analysis
+      let responseBody = '';
+      proxyRes.on('data', (chunk) => {
+        responseBody += chunk;
+      });
+      
+      proxyRes.on('end', () => {
+        try {
+          // Try to parse as JSON if possible
+          const parsedBody = JSON.parse(responseBody);
+          console.log('Error response body:', JSON.stringify(parsedBody, null, 2));
+        } catch (e) {
+          // Otherwise log as string
+          console.log('Error response body (raw):', responseBody);
+        }
+      });
+    }
   },
   onError: (err, req, res) => {
     console.error('Proxy error:', err);
@@ -59,10 +109,61 @@ const apiProxy = createProxyMiddleware({
       message: 'Unable to connect to the backend API service',
       details: err.message,
       backendUrl: BACKEND_URL,
-      path: req.path
+      path: req.path,
+      originalUrl: req.originalUrl
     });
   }
 });
+
+// Try a direct healthcheck to the backend on startup
+const checkBackendHealth = async () => {
+  // List of potential health check endpoints to try
+  const healthEndpoints = [
+    '/api/health',
+    '/api/health-check',
+    '/health',
+    '/healthz',
+    '/api/v1/health',
+    '/'
+  ];
+  
+  for (const endpoint of healthEndpoints) {
+    try {
+      const url = `${BACKEND_URL}${endpoint}`;
+      console.log(`Checking backend health at ${url}...`);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        timeout: 5000 // 5 second timeout
+      });
+      
+      if (response.ok) {
+        console.log(`Backend health check successful at ${endpoint}!`);
+        try {
+          const data = await response.json();
+          console.log('Health check response:', JSON.stringify(data, null, 2));
+        } catch (e) {
+          const text = await response.text();
+          console.log('Health check response (text):', text);
+        }
+        
+        // If we found a working endpoint, no need to try others
+        return;
+      } else {
+        console.log(`Backend endpoint ${endpoint} returned status: ${response.status}`);
+      }
+    } catch (err) {
+      console.log(`Backend health check error for ${endpoint}:`, err.message);
+    }
+  }
+  
+  // If we get here, none of the health endpoints worked
+  console.error('Could not connect to any backend health endpoints. Please check your backend URL configuration.');
+};
 
 // Proxy API requests to the backend server
 app.use('/api', apiProxy);
@@ -104,6 +205,9 @@ app.use((err, req, res, next) => {
 // Start server with graceful shutdown
 const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on http://0.0.0.0:${PORT}`);
+  
+  // Check backend health after server starts
+  checkBackendHealth();
 });
 
 // Handle graceful shutdown
