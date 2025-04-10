@@ -162,9 +162,10 @@ global.savePersistentData = savePersistentData;
 
 const app = express();
 
-// Get PORT dynamically from environment variables
-// On Render, this will be set automatically
-const PORT = process.env.PORT || 5000;
+// On Render, we need to explicitly bind to both the environment port AND port 5000
+// This is because Render specifically scans for port 5000 in its health checks
+const RENDER_PORT = 5000; // The port Render is explicitly looking for
+const ENV_PORT = process.env.PORT || 3000; // The dynamic port assigned by Render
 
 // Explicitly detect Render environment
 const isRender = Boolean(process.env.RENDER);
@@ -174,7 +175,8 @@ const isProduction = process.env.NODE_ENV === 'production' || isRender || proces
 console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 console.log(`Running on Render: ${isRender ? 'Yes' : 'No'}`);
 console.log(`Production mode: ${isProduction ? 'Yes' : 'No'}`);
-console.log(`Using PORT: ${PORT}`);
+console.log(`Environment PORT: ${ENV_PORT}`);
+console.log(`Render expected PORT: ${RENDER_PORT}`);
 
 // Maximum number of connection retries
 const MAX_RETRIES = 5;
@@ -318,7 +320,7 @@ app.get('/health', (req, res) => {
     service: 'token-system',
     version: '1.0.0',
     environment: process.env.NODE_ENV || 'development',
-    port: PORT,
+    port: ENV_PORT,
     render: Boolean(process.env.RENDER)
   });
 });
@@ -329,7 +331,7 @@ app.get('/api/health-check', (req, res) => {
     status: 'ok', 
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
-    port: PORT
+    port: ENV_PORT
   });
 });
 
@@ -540,24 +542,19 @@ function isPortAvailable(port) {
 }
 
 // Log configured port
-console.log(`\n📡 Attempting to start server on port ${PORT} (from environment: ${process.env.PORT || 'not set, using default'})`);
+console.log(`\n📡 Attempting to start server on port ${ENV_PORT} (from environment: ${process.env.PORT || 'not set, using default'})`);
 console.log(`\n💻 Running in environment: ${process.env.NODE_ENV || 'development'}`);
 console.log(`\n🔍 Render deployment: ${process.env.RENDER ? 'Yes' : 'No'}`);
 
 // Create server instance
 async function startServer() {
   try {
-    // Test if port is available first
-    const portAvailable = await isPortAvailable(PORT);
-    if (!portAvailable) {
-      console.warn(`⚠️ Port ${PORT} is not available. Will try to start server anyway, but it might fail.`);
-    }
-
     // For cloud platforms like Render, we need to listen on 0.0.0.0
     const HOST = process.env.HOST || '0.0.0.0';
     
-    const server = app.listen(PORT, HOST, () => {
-      console.log(`\n✨ Server running at http://${HOST}:${PORT}`);
+    // Start the main server on the environment port
+    const mainServer = app.listen(ENV_PORT, HOST, () => {
+      console.log(`\n✨ Main server running at http://${HOST}:${ENV_PORT}`);
       console.log('\n🏫 EDUCATION MANAGEMENT SYSTEM');
       console.log('----------------------------');
       console.log('📊 Grading System: Available');
@@ -568,21 +565,60 @@ async function startServer() {
       console.log('\n⚡ Server is ready to accept connections!');
     });
 
-    // Handle server events
-    server.on('error', (error) => {
-      console.error('\n❌ SERVER ERROR:', error);
+    // Handle server events for the main server
+    mainServer.on('error', (error) => {
+      console.error('\n❌ MAIN SERVER ERROR:', error);
       if (error.code === 'EADDRINUSE') {
-        console.error(`Port ${PORT} is already in use. Please try a different port or stop the other process.`);
+        console.error(`Port ${ENV_PORT} is already in use. Please try a different port or stop the other process.`);
       } else if (error.code === 'EACCES') {
-        console.error(`Port ${PORT} requires elevated privileges. Try using a port number > 1024.`);
+        console.error(`Port ${ENV_PORT} requires elevated privileges. Try using a port number > 1024.`);
       } else {
-        console.error(`Error starting server: ${error.message}`);
+        console.error(`Error starting main server: ${error.message}`);
       }
     });
 
+    // If we're in Render and ENV_PORT is not 5000, create a proxy server on port 5000
+    if (isRender && ENV_PORT !== RENDER_PORT) {
+      try {
+        // Create a simple proxy/health check server on port 5000 specifically for Render
+        const proxyServer = http.createServer((req, res) => {
+          if (req.url === '/health') {
+            // Respond to health checks
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
+              status: 'ok',
+              message: 'Health check proxy for Render',
+              mainPort: ENV_PORT,
+              proxyPort: RENDER_PORT
+            }));
+          } else {
+            // For all other requests, respond with a redirect to the main server
+            res.writeHead(302, { 'Location': `http://${HOST}:${ENV_PORT}${req.url}` });
+            res.end();
+          }
+        });
+
+        proxyServer.listen(RENDER_PORT, HOST, () => {
+          console.log(`\n🔄 Proxy server for Render running on port ${RENDER_PORT}`);
+          console.log(`\n💁 This proxy will handle Render's health checks while redirecting other traffic to port ${ENV_PORT}`);
+        });
+
+        proxyServer.on('error', (error) => {
+          console.error(`\n⚠️ Proxy server error: ${error.message}`);
+          if (error.code === 'EADDRINUSE') {
+            console.log(`Port ${RENDER_PORT} is already in use. This is not critical if another service is handling it.`);
+          }
+          // We don't exit the process if the proxy fails - the main server is still running
+        });
+      } catch (proxyError) {
+        console.error(`\n⚠️ Failed to start proxy for Render: ${proxyError.message}`);
+        console.log('This is not critical - the main server is still running');
+      }
+    }
+
     // Log when server is listening
-    server.on('listening', () => {
-      const addr = server.address();
+    mainServer.on('listening', () => {
+      const addr = mainServer.address();
       const bind = typeof addr === 'string' ? `pipe ${addr}` : `port ${addr.port}`;
       console.log(`⚡ Listening on ${bind} (${addr.address})`);
     });

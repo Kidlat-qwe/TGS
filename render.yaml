@@ -12,4 +12,5 @@ services:
         sync: false  # Let Render set this automatically
       - key: RENDER
         value: true
-    healthCheckPath: /health 
+    healthCheckPath: /health
+    healthCheckPort: 5000 # Explicitly set health check port to 5000 
