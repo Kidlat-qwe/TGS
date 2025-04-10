@@ -46,15 +46,36 @@ export default defineConfig(({ command, mode }) => {
     build: {
       outDir: 'dist',
       assetsDir: 'assets',
+      // Add optimization settings for better bundling
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            vendor: ['react', 'react-dom', 'react-router-dom'],
+          },
+        },
+      },
+      // Minimize chunk size to prevent timeouts
+      chunkSizeWarningLimit: 1000,
+    },
+    optimizeDeps: {
+      include: ['react', 'react-dom'],
+      // Force dependency optimization to avoid issues
+      force: true
     },
     server: {
       port: 3000,
       host: true,
+      // Increase timeout values to prevent 502 errors
+      hmr: {
+        timeout: 60000,
+      },
       proxy: {
         '/api': {
           target: backendUrl,
           changeOrigin: true,
           secure: false,
+          timeout: 60000,
+          proxyTimeout: 60000,
           rewrite: (path) => path.replace(/^\/api/, '/api')
         }
       },

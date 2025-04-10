@@ -1,13 +1,38 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
     <title>Token Generating System</title>
+    <!-- Preload critical assets -->
+    <link rel="preload" href="/src/main.jsx" as="script" />
+    <!-- Fallback for react-dom client -->
+    <script>
+      // Handle potential errors with React DOM client loading
+      window.addEventListener('error', function(event) {
+        if (event.filename && event.filename.includes('react-dom_client.js')) {
+          console.warn('Detected react-dom client loading issue - reloading page...');
+          localStorage.setItem('react-dom-reload-attempt', Date.now());
+          // Delay reload to avoid infinite reload loops
+          setTimeout(() => {
+            location.reload();
+          }, 1000);
+        }
+      });
+    </script>
+    <!-- Load React DOM fallback script for 502 error -->
+    <script src="/react-dom-fallback.js"></script>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <noscript>
+      <div style="text-align: center; padding: 20px;">
+        <h1>JavaScript Required</h1>
+        <p>This application requires JavaScript to be enabled in your browser.</p>
+      </div>
+    </noscript>
   </body>
 </html>

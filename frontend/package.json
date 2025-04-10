@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:clear": "vite --force",
+    "dev:alt-port": "vite --port 8080",
+    "troubleshoot": "node client-network-check.js",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
