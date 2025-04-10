@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 import { fileURLToPath } from 'url'
@@ -8,8 +8,22 @@ const __dirname = path.dirname(__filename);
 
 // https://vite.dev/config/
 export default defineConfig(({ command, mode }) => {
+  // Load env file based on mode
+  const env = loadEnv(mode, process.cwd(), '')
+  
   // Detect environment
   const isProduction = mode === 'production' || process.env.NODE_ENV === 'production'
+  
+  // Define allowed hosts - include Render domains and any from env
+  const allowedHosts = [
+    'localhost', 
+    '127.0.0.1', 
+    'tgs-frontend.onrender.com', 
+    '.onrender.com',  // Wildcard for all Render subdomains
+    'all'             // Allow all hosts as a fallback
+  ]
+  
+  console.log('Allowed hosts:', allowedHosts)
   
   return {
     plugins: [react()],
@@ -21,6 +35,8 @@ export default defineConfig(({ command, mode }) => {
     define: {
       'import.meta.env.VITE_IS_PRODUCTION': JSON.stringify(isProduction),
       'import.meta.env.VITE_API_BASE': JSON.stringify('/api'),
+      // Add the allowed hosts to the build
+      'import.meta.env.VITE_ALLOWED_HOSTS': JSON.stringify(allowedHosts.join(','))
     },
     build: {
       outDir: 'dist',
@@ -34,7 +50,15 @@ export default defineConfig(({ command, mode }) => {
           target: 'http://localhost:5000',
           changeOrigin: true,
         }
-      }
+      },
+      // Use the allowed hosts array
+      allowedHosts: allowedHosts
+    },
+    preview: {
+      port: 3000,
+      host: true,
+      // Use the allowed hosts array
+      allowedHosts: allowedHosts
     }
   }
 })
