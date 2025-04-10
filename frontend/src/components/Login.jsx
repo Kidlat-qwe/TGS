@@ -3,8 +3,8 @@ import '../styles/Login.css';
 import { getApiUrl, fetchWithAuth, USE_MOCK_API } from '../utils/api';
 
 const Login = ({ onLogin }) => {
-  const [email, setEmail] = useState(USE_MOCK_API ? 'test@example.com' : '');
-  const [password, setPassword] = useState(USE_MOCK_API ? 'password123' : '');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showContactForm, setShowContactForm] = useState(false);
@@ -81,12 +81,7 @@ const Login = ({ onLogin }) => {
           error.message.includes('empty response') ||
           error.message.includes('server encountered an error')) {
         
-        // Suggest using test credentials if not already using them
-        if (email !== 'test@example.com' && !USE_MOCK_API) {
-          setError(`Unable to connect to the server. Try using test credentials (test@example.com / password123) or contact your administrator.`);
-        } else {
-          setError('Unable to connect to the server. Please check your internet connection and try again.');
-        }
+        setError('Unable to connect to the server. Please check your internet connection and try again.');
       } else {
         setError(error.message || 'Failed to login. Please try again.');
       }
@@ -168,14 +163,6 @@ const Login = ({ onLogin }) => {
       <div className="auth-form-box">
         <h2>Login</h2>
         {error && <div className="error-message">{error}</div>}
-        
-        {/* Show mock API notice when enabled */}
-        {USE_MOCK_API && (
-          <div className="info-message" style={{ backgroundColor: '#fff3cd', padding: '10px', marginBottom: '15px', borderRadius: '4px' }}>
-            <strong>Development Mode:</strong> Using simulated API responses. <br />
-            Login with: test@example.com / password123
-          </div>
-        )}
         
         <form onSubmit={handleSubmit}>
           <div className="form-group">

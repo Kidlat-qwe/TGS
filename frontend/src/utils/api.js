@@ -7,7 +7,7 @@ export const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
 export const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "https://token-system-api.onrender.com";
 
 // Flag to enable mock API when the backend is down
-export const USE_MOCK_API = true; // Set to true to use mock responses while backend is down
+export const USE_MOCK_API = false; // Set to true to use mock responses while backend is down
 
 // Mock API responses for offline development
 const MOCK_RESPONSES = {
