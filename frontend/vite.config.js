@@ -26,12 +26,21 @@ export default defineConfig(({ command, mode }) => {
       'import.meta.env.VITE_IS_PRODUCTION': JSON.stringify(isProduction),
       'import.meta.env.VITE_API_BASE': JSON.stringify('/api'),
     },
+    build: {
+      outDir: 'dist',
+      assetsDir: 'assets',
+      // Increase the warning limit to avoid unnecessary warnings
+      chunkSizeWarningLimit: 1000,
+      rollupOptions: {
+        output: {
+          manualChunks: undefined,
+        },
+      }
+    },
     server: {
-      port: 3000, // Explicitly set port to 3000 instead of relying on env variables
-      host: '0.0.0.0', // Make it accessible from outside the container
+      port: 3000,
+      host: true, // Listen on all addresses, equivalent to 0.0.0.0
       proxy: {
-        // In development, always proxy API requests to the backend
-        // In production on Render, this will be handled by serving static files from the backend
         '/api': {
           target: isProduction && isRender ? '/' : 'http://localhost:5000',
           changeOrigin: true,
@@ -39,9 +48,25 @@ export default defineConfig(({ command, mode }) => {
       },
       // Disable HMR for compatibility with Replit and Render
       hmr: false,
-      // In production, allow all hosts to prevent deployment issues
-      // In development, be more specific
-      allowedHosts: isProduction ? 'all' : ['localhost', '127.0.0.1']
+      // Allow ALL hosts
+      allowedHosts: 'all',
+      cors: true,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
+        "Access-Control-Allow-Headers": "X-Requested-With, content-type, Authorization"
+      }
+    },
+    preview: {
+      port: 3000,
+      host: true,
+      allowedHosts: 'all',
+      cors: true,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
+        "Access-Control-Allow-Headers": "X-Requested-With, content-type, Authorization"
+      }
     }
   }
 })
