@@ -4,10 +4,10 @@
 export const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
 
 // Get the backend URL for direct fetches
-export const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "https://token-system-api.onrender.com";
+export const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
 
 // Flag to enable mock API when the backend is down
-export const USE_MOCK_API = false; // Set to true to use mock responses while backend is down
+export const USE_MOCK_API = false; // Set to false to use the real backend API
 
 // Mock API responses for offline development
 const MOCK_RESPONSES = {
@@ -43,7 +43,14 @@ export const getApiUrl = (endpoint) => {
   const cleanEndpoint = endpoint.startsWith("/")
     ? endpoint.substring(1)
     : endpoint;
-  return `${API_BASE_URL}/${cleanEndpoint}`;
+  
+  // Log the constructed URL in development for debugging
+  const url = `${API_BASE_URL}/${cleanEndpoint}`;
+  if (import.meta.env.DEV) {
+    console.log(`API URL constructed: ${url}`);
+  }
+  
+  return url;
 };
 
 // Helper function specifically for Grading System API calls

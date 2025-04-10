@@ -10,9 +10,8 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Get the backend URL from environment or use a default production URL
-// Double-check this URL is correct and the service is running
-const BACKEND_URL = process.env.BACKEND_URL || 'https://token-system-api.onrender.com';
+// Get the backend URL from environment or use the local development server
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
 
 console.log(`Starting server with configuration:`);
 console.log(`- PORT: ${PORT}`);
@@ -154,16 +153,26 @@ const apiProxy = createProxyMiddleware({
     
     // Try to determine if it's a timeout
     const isTimeout = err.code === 'ECONNRESET' || err.code === 'ETIMEDOUT' || err.message.includes('timeout');
+    const isConnectionRefused = err.code === 'ECONNREFUSED';
+    
+    // If connection is refused, try to use mock API
+    if (isConnectionRefused) {
+      console.log('Backend server is not running. Consider enabling mock API mode in api.js');
+    }
     
     // Send a friendly error response
     res.status(502).json({
       error: isTimeout ? 'Backend API Timeout' : 'Backend API Connection Error',
       message: isTimeout 
         ? 'The backend API took too long to respond. Render free tier services can sleep after inactivity and take time to wake up.'
-        : 'Unable to connect to the backend API service. The backend might be down or misconfigured.',
+        : isConnectionRefused
+          ? 'Unable to connect to the backend API service. Make sure your backend is running on ' + BACKEND_URL + '.'
+          : 'Unable to connect to the backend API service. The backend might be down or misconfigured.',
       suggestion: isTimeout
         ? 'Please try again in a moment while the backend service wakes up.'
-        : 'Please check that the backend service is running and properly configured.',
+        : isConnectionRefused
+          ? 'Try starting your backend server with "node backend/server.js"'
+          : 'Please check that the backend service is running and properly configured.',
       details: err.message,
       code: err.code,
       backendUrl: BACKEND_URL,
