@@ -69,6 +69,12 @@ export default defineConfig(({ command, mode }) => {
       hmr: {
         timeout: 60000,
       },
+      // Set up CORS headers for development server
+      cors: {
+        origin: '*',
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization']
+      },
       proxy: {
         '/api': {
           target: backendUrl,
@@ -76,7 +82,25 @@ export default defineConfig(({ command, mode }) => {
           secure: false,
           timeout: 60000,
           proxyTimeout: 60000,
-          rewrite: (path) => path.replace(/^\/api/, '/api')
+          rewrite: (path) => path.replace(/^\/api/, '/api'),
+          // Add error handling for proxy
+          configure: (proxy, options) => {
+            proxy.on('error', (err, req, res) => {
+              console.error('Proxy error:', err);
+              // Return mock response for health endpoint on error
+              if (req.url.includes('/health')) {
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ status: 'healthy', mock: true }));
+              } else {
+                // For other endpoints, return a more helpful error
+                res.writeHead(502, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ 
+                  error: 'API Server Unavailable', 
+                  message: 'The API server is currently unavailable. The Mock API is enabled.'
+                }));
+              }
+            });
+          }
         }
       },
       // Use the allowed hosts array

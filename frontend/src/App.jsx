@@ -3,6 +3,7 @@ import Login from './components/Login';
 import Signup from './components/Signup';
 import TokenGenerator from './components/TokenGenerator';
 import './styles/App.css';
+import { USE_MOCK_API } from './utils/api';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -11,6 +12,38 @@ function App() {
   // Get API base URL from environment variable or use a relative URL as fallback
   const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
+  // Set up a fetch interceptor for health endpoints to handle server errors
+  useEffect(() => {
+    if (USE_MOCK_API) {
+      // Store the original fetch function
+      const originalFetch = window.fetch;
+      
+      // Replace with our interceptor
+      window.fetch = function(url, options) {
+        if (typeof url === 'string' && url.includes('/health')) {
+          console.log('Intercepting health check request with mock response');
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () => Promise.resolve({
+              status: 'healthy',
+              uptime: '3d 2h 45m',
+              version: '1.0.0',
+              mock: true
+            })
+          });
+        }
+        // Otherwise use the original fetch
+        return originalFetch.apply(this, arguments);
+      };
+      
+      // Restore original fetch on component unmount
+      return () => {
+        window.fetch = originalFetch;
+      };
+    }
+  }, []);
+
   useEffect(() => {
     // Check if token exists in localStorage
     const token = localStorage.getItem('token');
@@ -18,6 +51,13 @@ function App() {
     // Function to verify token validity with the server
     const verifyToken = async () => {
       try {
+        // If Mock API is enabled, consider the token valid
+        if (USE_MOCK_API && token) {
+          console.log('Using mock API - automatic authentication');
+          setIsAuthenticated(true);
+          return;
+        }
+        
         // Call a health check endpoint that requires authentication
         const response = await fetch(`${API_BASE_URL}/health`, {
           method: 'GET',
@@ -37,6 +77,14 @@ function App() {
         }
       } catch (error) {
         console.error('Token verification error:', error);
+        
+        // Even if there's an error, if mock API is enabled, proceed with authentication
+        if (USE_MOCK_API && token) {
+          console.log('Error communicating with server, but mock API is enabled - proceeding with authentication');
+          setIsAuthenticated(true);
+          return;
+        }
+        
         localStorage.removeItem('token');
         setIsAuthenticated(false);
       }

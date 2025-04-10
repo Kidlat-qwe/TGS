@@ -32,7 +32,16 @@ const MOCK_RESPONSES = {
     success: {
       status: 'healthy',
       uptime: '3d 2h 45m',
-      version: '1.0.0'
+      version: '1.0.0',
+      mock: true
+    }
+  },
+  'api/health': {
+    success: {
+      status: 'healthy',
+      uptime: '3d 2h 45m',
+      version: '1.0.0',
+      mock: true
     }
   },
   'admin-contacts': {

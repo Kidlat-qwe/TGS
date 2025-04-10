@@ -21,11 +21,11 @@
     // Create script elements for React and ReactDOM
     const reactScript = document.createElement('script');
     reactScript.src = 'https://unpkg.com/react@18/umd/react.production.min.js';
-    reactScript.crossOrigin = '';
+    reactScript.crossOrigin = 'anonymous';
     
     const reactDomScript = document.createElement('script');
     reactDomScript.src = 'https://unpkg.com/react-dom@18/umd/react-dom.production.min.js';
-    reactDomScript.crossOrigin = '';
+    reactDomScript.crossOrigin = 'anonymous';
     
     // Append to document
     document.head.appendChild(reactScript);

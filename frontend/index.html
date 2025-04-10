@@ -6,8 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
     <title>Token Generating System</title>
-    <!-- Preload critical assets -->
-    <link rel="preload" href="/src/main.jsx" as="script" />
+    <!-- CORS fix script - must be loaded before other resources -->
+    <script src="/cors-fix.js"></script>
+    <!-- Preload critical assets with crossorigin attribute -->
+    <link rel="preload" href="/src/main.jsx" as="script" crossorigin="anonymous" />
     <!-- Fallback for react-dom client -->
     <script>
       // Handle potential errors with React DOM client loading
