@@ -161,7 +161,7 @@ global.savePersistentData = savePersistentData;
 // ===== APP CONFIGURATION =====
 
 const app = express();
-const PORT = 5000; // Set port explicitly to 5000 to match frontend expectations
+const PORT = process.env.PORT || 5000; // Use environment variable PORT with fallback to 5000
 
 // Maximum number of connection retries
 const MAX_RETRIES = 5;
@@ -484,6 +484,9 @@ if (isProduction) {
 }
 
 // ===== SERVER STARTUP =====
+
+// Log configured port
+console.log(`\n📡 Attempting to start server on port ${PORT} (from environment: ${process.env.PORT || 'not set, using default'})`);
 
 // Create server instance
 try {
