@@ -10,7 +10,9 @@
     "preview": "vite preview",
     "replit": "bash replit_start.sh",
     "replit:dev": "bash replit_start.sh dev",
-    "replit:prod": "bash replit_start.sh"
+    "replit:prod": "bash replit_start.sh",
+    "deploy:vercel": "vercel",
+    "deploy:netlify": "netlify deploy --prod"
   },
   "dependencies": {
     "axios": "^1.8.2",
