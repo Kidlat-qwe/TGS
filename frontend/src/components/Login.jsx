@@ -27,15 +27,53 @@ const Login = ({ onLogin }) => {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await response.json();
+      // Check for empty response before trying to parse JSON
+      const responseText = await response.text();
+      let data;
+      
+      try {
+        // Only try to parse as JSON if there's actual content
+        data = responseText ? JSON.parse(responseText) : {};
+      } catch (jsonError) {
+        console.error('Error parsing JSON response:', jsonError, 'Raw response:', responseText);
+        
+        if (!responseText || responseText.trim() === '') {
+          throw new Error('Server returned an empty response. The backend might be unavailable or experiencing issues.');
+        } else {
+          throw new Error('The server response was not valid. This might indicate a backend issue.');
+        }
+      }
+
       if (!response.ok) {
-        throw new Error(data.error || 'Login failed');
+        // Handle specific error cases
+        if (response.status === 401) {
+          throw new Error('Invalid email or password. Please try again.');
+        } else if (response.status === 403) {
+          throw new Error('Your account is not approved yet or has been disabled.');
+        } else if (response.status >= 500) {
+          throw new Error('The server encountered an error. Please try again later.');
+        }
+        
+        // Use the error message from the response if available
+        throw new Error(data.error || data.message || `Login failed with status ${response.status}`);
+      }
+
+      // Check if the response contains a token
+      if (!data.token) {
+        throw new Error('No authentication token received. Please try again.');
       }
 
       localStorage.setItem('token', data.token);
       onLogin(data.token);
     } catch (error) {
-      setError(error.message);
+      console.error('Login error:', error);
+      
+      // Show a connectivity error if the fetch operation failed
+      if (error.message.includes('NetworkError') || error.message.includes('Failed to fetch')) {
+        setError('Unable to connect to the server. Please check your internet connection and try again.');
+      } else {
+        setError(error.message || 'Failed to login. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

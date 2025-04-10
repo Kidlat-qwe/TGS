@@ -3,6 +3,9 @@
 // Get the base API URL from environment variables or use a relative URL as fallback
 export const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
 
+// Get the backend URL for direct fetches
+export const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "https://token-system-api.onrender.com";
+
 // Helper function to get the full API URL for a given endpoint
 export const getApiUrl = (endpoint) => {
   // Remove any leading slash from the endpoint to avoid double slashes
@@ -46,6 +49,14 @@ export const fetchWithAuth = async (endpoint, options = {}) => {
       headers["Authorization"] = `Bearer ${token}`;
     }
 
+    // Log the request for debugging (in development only)
+    if (import.meta.env.DEV) {
+      console.log(`API Request: ${getApiUrl(endpoint)}`, { 
+        method: options.method || 'GET',
+        headers: headers 
+      });
+    }
+
     // Make the request
     const response = await fetch(getApiUrl(endpoint), {
       ...options,
@@ -53,35 +64,46 @@ export const fetchWithAuth = async (endpoint, options = {}) => {
       credentials: "include", // Include cookies in the request
     });
 
-    // For non-OK responses, attempt to parse error message
-    if (!response.ok) {
-      const contentType = response.headers.get("content-type");
-
-      // Check if response is JSON
-      if (contentType && contentType.includes("application/json")) {
-        const errorData = await response.json();
-        throw new Error(
-          errorData.error ||
-            errorData.message ||
-            `Request failed with status ${response.status}`,
-        );
-      } else {
-        // Handle non-JSON error responses
-        const errorText = await response.text();
-        throw new Error(
-          errorText || `Request failed with status ${response.status}`,
-        );
-      }
-    }
-
+    // Check if the response is empty
+    const responseText = await response.text();
+    
     // For successful responses with no content
-    if (response.status === 204) {
+    if (response.status === 204 || !responseText) {
       return null;
     }
+    
+    // Try to parse JSON
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (jsonError) {
+      console.error('Error parsing JSON response:', jsonError, 'Raw response:', responseText);
+      
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}: ${response.statusText}`);
+      }
+      
+      // Return the raw text if we can't parse JSON but the request was successful
+      return { text: responseText };
+    }
 
-    // For other successful responses, parse JSON
-    return await response.json();
+    // For non-OK responses with valid JSON
+    if (!response.ok) {
+      throw new Error(
+        data.error ||
+          data.message ||
+          `Request failed with status ${response.status}`
+      );
+    }
+
+    // Return the parsed JSON data
+    return data;
   } catch (error) {
+    // Log the error in development
+    if (import.meta.env.DEV) {
+      console.error('API Request failed:', error);
+    }
+    
     // Re-throw the error for the caller to handle
     throw error;
   }

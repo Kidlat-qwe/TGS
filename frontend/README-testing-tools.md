@@ -94,6 +94,46 @@ Testing endpoint: https://token-system-api.onrender.com/
 ✨ All tests completed.
 ```
 
+## 3. CORS Connection Checker
+
+The `cors-check.html` file is a specialized tool to diagnose CORS configuration issues between your frontend and backend. It provides a visual interface that shows exactly what CORS headers are being returned and identifies any potential configuration issues.
+
+### How to Use:
+
+1. Open `cors-check.html` directly in your browser.
+2. Enter your backend API URL.
+3. Click "Test Connection" to verify basic connectivity.
+4. Click "Check CORS Configuration" to test CORS headers.
+5. Click "Test Login API" to test a full login request including credentials.
+
+This tool is particularly helpful when debugging "Failed to execute 'json' on 'Response'" errors and other CORS-related issues.
+
+## 4. Backend Connection Tester (Node.js)
+
+The `connection-test.js` script is specifically designed to test the login API endpoint and diagnose connectivity issues.
+
+### Features:
+
+- Tests the login endpoint with sample credentials
+- Displays detailed response information
+- Diagnoses common connection problems
+- Handles and explains various error scenarios
+
+### Requirements:
+
+- Node.js installed on your system
+- node-fetch package (`npm install node-fetch`)
+
+### Usage:
+
+```bash
+# Test the default backend API
+node connection-test.js
+
+# Test a specific backend API
+node connection-test.js https://your-backend-api.com
+```
+
 ## Troubleshooting Common Issues
 
 ### CORS Errors in Browser
@@ -103,6 +143,17 @@ If you see CORS errors in the browser console when using the API tester:
 1. Ensure your backend API has CORS properly configured to allow requests from your frontend origin.
 2. For development, you can add `'*'` to the allowed origins in your backend CORS configuration.
 3. For production, specify the exact frontend domain in your CORS configuration.
+4. Make sure both `Access-Control-Allow-Origin` and `Access-Control-Allow-Credentials` headers are properly set.
+5. Use the `cors-check.html` tool to diagnose specific CORS configuration issues.
+
+### JSON Parsing Errors
+
+If you see "Failed to execute 'json' on 'Response'" or "Unexpected end of JSON input" errors:
+
+1. The backend may be returning an empty response or invalid JSON.
+2. Check if the backend API is properly sending a Content-Type: application/json header.
+3. Verify that the backend is correctly formatting the response data as valid JSON.
+4. Use the `cors-check.html` tool to see the raw response content.
 
 ### Connection Timeouts
 

@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CORS & API Connection Checker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    h1, h2 {
+      color: #333;
+    }
+    .test-section {
+      background-color: #f9f9f9;
+      border: 1px solid #ddd;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 5px;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 8px;
+      margin: 8px 0;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      margin-right: 10px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    pre {
+      background-color: #f5f5f5;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 3px;
+      overflow-x: auto;
+    }
+    .success {
+      color: #388e3c;
+      font-weight: bold;
+    }
+    .error {
+      color: #d32f2f;
+      font-weight: bold;
+    }
+    .warning {
+      color: #f57c00;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>CORS & API Connection Checker</h1>
+  <p>This tool helps diagnose connection issues with your backend API, particularly CORS-related problems.</p>
+
+  <div class="test-section">
+    <h2>1. Test Backend API Connection</h2>
+    <p>This test will check if the backend API is accessible and responding to requests.</p>
+    <input type="text" id="backendUrl" value="https://token-system-api.onrender.com" placeholder="Enter backend URL">
+    <button onclick="testConnection()">Test Connection</button>
+    <div id="connectionResult"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>2. Check CORS Headers</h2>
+    <p>This test will check if the backend API has CORS properly configured.</p>
+    <button onclick="checkCors()">Check CORS Configuration</button>
+    <div id="corsResult"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>3. Test Login API</h2>
+    <p>This test will attempt to send login credentials to the API.</p>
+    <button onclick="testLogin()">Test Login API</button>
+    <div id="loginResult"></div>
+  </div>
+
+  <script>
+    // Test basic connection to backend
+    async function testConnection() {
+      const result = document.getElementById('connectionResult');
+      const backendUrl = document.getElementById('backendUrl').value.trim();
+      
+      result.innerHTML = '<p>Testing connection...</p>';
+      
+      try {
+        const startTime = performance.now();
+        
+        // Try a simple HEAD request first
+        const response = await fetch(`${backendUrl}`, {
+          method: 'HEAD',
+          mode: 'cors',
+          cache: 'no-cache'
+        });
+        
+        const endTime = performance.now();
+        const duration = Math.round(endTime - startTime);
+        
+        if (response.ok) {
+          result.innerHTML = `
+            <p class="success">✅ Connection successful in ${duration}ms</p>
+            <p>Status: ${response.status} ${response.statusText}</p>
+          `;
+          // List the response headers
+          result.innerHTML += '<p>Response headers:</p><pre>';
+          for (const [key, value] of response.headers) {
+            result.innerHTML += `${key}: ${value}\n`;
+          }
+          result.innerHTML += '</pre>';
+        } else {
+          result.innerHTML = `
+            <p class="warning">⚠️ Backend responded with status: ${response.status} ${response.statusText} in ${duration}ms</p>
+          `;
+        }
+      } catch (error) {
+        result.innerHTML = `
+          <p class="error">❌ Connection failed: ${error.message}</p>
+          <p>This could be due to:</p>
+          <ul>
+            <li>Backend server is offline</li>
+            <li>CORS is not properly configured</li>
+            <li>Network connectivity issues</li>
+            <li>Invalid URL</li>
+          </ul>
+        `;
+      }
+    }
+    
+    // Check CORS headers
+    async function checkCors() {
+      const result = document.getElementById('corsResult');
+      const backendUrl = document.getElementById('backendUrl').value.trim();
+      
+      result.innerHTML = '<p>Checking CORS configuration...</p>';
+      
+      try {
+        // Send an OPTIONS request to check CORS headers
+        const response = await fetch(`${backendUrl}/api/auth/login`, {
+          method: 'OPTIONS',
+          mode: 'cors',
+          headers: {
+            'Origin': window.location.origin,
+            'Access-Control-Request-Method': 'POST',
+            'Access-Control-Request-Headers': 'Content-Type, Authorization'
+          }
+        });
+        
+        result.innerHTML = `<p>OPTIONS request status: ${response.status} ${response.statusText}</p>`;
+        
+        // List all the CORS-related headers
+        const corsHeaders = [
+          'access-control-allow-origin',
+          'access-control-allow-methods',
+          'access-control-allow-headers',
+          'access-control-allow-credentials',
+          'access-control-max-age',
+          'access-control-expose-headers'
+        ];
+        
+        result.innerHTML += '<p>CORS Headers:</p><pre>';
+        let corsHeadersFound = false;
+        
+        for (const header of corsHeaders) {
+          const value = response.headers.get(header);
+          if (value) {
+            corsHeadersFound = true;
+            result.innerHTML += `${header}: ${value}\n`;
+          }
+        }
+        
+        if (!corsHeadersFound) {
+          result.innerHTML += '(No CORS headers detected)\n';
+        }
+        
+        result.innerHTML += '</pre>';
+        
+        // Check for specific CORS configurations
+        const allowOrigin = response.headers.get('access-control-allow-origin');
+        
+        if (!allowOrigin) {
+          result.innerHTML += `
+            <p class="error">❌ Missing 'Access-Control-Allow-Origin' header</p>
+            <p>The backend needs to include this header to allow cross-origin requests.</p>
+          `;
+        } else if (allowOrigin === '*') {
+          result.innerHTML += `
+            <p class="warning">⚠️ 'Access-Control-Allow-Origin' is set to '*' (wildcard)</p>
+            <p>This is fine for development but should be more restrictive in production.</p>
+          `;
+        } else {
+          result.innerHTML += `
+            <p class="success">✅ 'Access-Control-Allow-Origin' is properly set to a specific origin</p>
+          `;
+        }
+        
+        // Check for credentials support
+        const allowCredentials = response.headers.get('access-control-allow-credentials');
+        
+        if (allowCredentials === 'true') {
+          result.innerHTML += `
+            <p class="success">✅ 'Access-Control-Allow-Credentials' is set to 'true'</p>
+            <p>This allows sending cookies and authentication headers cross-origin.</p>
+          `;
+          
+          if (allowOrigin === '*') {
+            result.innerHTML += `
+              <p class="error">❌ Conflict: Both 'Access-Control-Allow-Origin: *' and 'Access-Control-Allow-Credentials: true' are set</p>
+              <p>This is invalid. When allowing credentials, the origin cannot be '*'.</p>
+            `;
+          }
+        } else {
+          result.innerHTML += `
+            <p class="warning">⚠️ 'Access-Control-Allow-Credentials' is not set to 'true'</p>
+            <p>This will prevent cookies and HTTP authentication from working cross-origin.</p>
+          `;
+        }
+        
+      } catch (error) {
+        result.innerHTML = `
+          <p class="error">❌ CORS check failed: ${error.message}</p>
+          <p>This could indicate CORS is not properly configured on the backend.</p>
+        `;
+      }
+    }
+    
+    // Test login API
+    async function testLogin() {
+      const result = document.getElementById('loginResult');
+      const backendUrl = document.getElementById('backendUrl').value.trim();
+      
+      result.innerHTML = '<p>Testing login API...</p>';
+      
+      try {
+        // Attempt a login with test credentials
+        const response = await fetch(`${backendUrl}/api/auth/login`, {
+          method: 'POST',
+          mode: 'cors',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: 'test@example.com',
+            password: 'password123'
+          })
+        });
+        
+        // Get the response body
+        const responseText = await response.text();
+        let responseData;
+        
+        // Try to parse as JSON
+        try {
+          if (responseText.trim()) {
+            responseData = JSON.parse(responseText);
+            result.innerHTML = `
+              <p>Status: ${response.status} ${response.statusText}</p>
+              <p>Response body:</p>
+              <pre>${JSON.stringify(responseData, null, 2)}</pre>
+            `;
+            
+            // Check if login was successful
+            if (response.ok && responseData.token) {
+              result.innerHTML = `
+                <p class="success">✅ Login API working correctly (returned auth token)</p>
+                ${result.innerHTML}
+              `;
+            } else if (response.status === 401 || response.status === 403) {
+              result.innerHTML = `
+                <p class="warning">⚠️ Login rejected, but API responded correctly</p>
+                <p>This is expected with test credentials.</p>
+                ${result.innerHTML}
+              `;
+            } else {
+              result.innerHTML = `
+                <p class="warning">⚠️ API responded but with an unexpected result</p>
+                ${result.innerHTML}
+              `;
+            }
+          } else {
+            result.innerHTML = `
+              <p class="error">❌ Empty response body</p>
+              <p>Status: ${response.status} ${response.statusText}</p>
+              <p>The server responded, but returned an empty body.</p>
+            `;
+          }
+        } catch (jsonError) {
+          result.innerHTML = `
+            <p class="error">❌ Invalid JSON response</p>
+            <p>Status: ${response.status} ${response.statusText}</p>
+            <p>Parse error: ${jsonError.message}</p>
+            <p>Raw response:</p>
+            <pre>${responseText}</pre>
+          `;
+        }
+      } catch (error) {
+        result.innerHTML = `
+          <p class="error">❌ Login API test failed: ${error.message}</p>
+          <p>This could be due to:</p>
+          <ul>
+            <li>CORS issues</li>
+            <li>Network connectivity problems</li>
+            <li>Backend server error</li>
+          </ul>
+          <p>Check your browser console for more details.</p>
+        `;
+      }
+    }
+  </script>
+</body>
+</html> 
