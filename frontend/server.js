@@ -11,7 +11,8 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Get the backend URL from environment or use a default production URL
-const BACKEND_URL = process.env.BACKEND_URL || 'https://tgs-backend.onrender.com';
+// Double-check this URL is correct and the service is running
+const BACKEND_URL = process.env.BACKEND_URL || 'https://token-system-api.onrender.com';
 
 console.log(`Starting server with configuration:`);
 console.log(`- PORT: ${PORT}`);
@@ -20,8 +21,8 @@ console.log(`- BACKEND_URL: ${BACKEND_URL}`);
 console.log(`- __dirname: ${__dirname}`);
 
 // Add JSON body parser middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Enable CORS with more options
 app.use(cors({
@@ -44,22 +45,38 @@ app.use((req, res, next) => {
   next();
 });
 
+// Special route for API status check
+app.get('/api-status', (req, res) => {
+  res.json({
+    status: 'Frontend server is running',
+    backendUrl: BACKEND_URL,
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Create API proxy middleware with enhanced error handling
 const apiProxy = createProxyMiddleware({
   target: BACKEND_URL,
   changeOrigin: true,
   secure: false, // Don't verify SSL certificates
+  ws: true, // Support websockets if needed
+  xfwd: true, // Add x-forwarded headers
+  followRedirects: true, // Follow HTTP 3xx responses as redirects
   pathRewrite: {
     '^/api': '/api' // Keep the /api prefix when forwarding
   },
+  // Set reasonable timeouts (in milliseconds)
+  proxyTimeout: 60000, // 60 seconds
+  timeout: 60000, // 60 seconds
+  // Retry configuration
+  // Set to 0 to disable retries
+  // Set to a positive number for the maximum number of retries
+  // Set to -1 for unlimited retries
+  retry: 1, // Try once, then retry once if it fails
   logLevel: 'debug', // More detailed logging
   onProxyReq: (proxyReq, req, res) => {
     // Log the headers we're sending to the backend
     console.log(`Proxying ${req.method} ${req.url} to ${BACKEND_URL}${req.url}`);
-    
-    // Add potential authentication headers
-    // Uncomment and adjust if your backend requires authentication
-    // proxyReq.setHeader('Authorization', 'Bearer your-token-here');
     
     // Copy authentication headers from client if present
     if (req.headers.authorization) {
@@ -67,17 +84,39 @@ const apiProxy = createProxyMiddleware({
       proxyReq.setHeader('Authorization', req.headers.authorization);
     }
     
+    // Additional headers that might help
+    proxyReq.setHeader('X-Forwarded-Proto', 'https');
+    proxyReq.setHeader('X-Forwarded-Host', req.headers.host || 'unknown');
+    proxyReq.setHeader('X-Forwarded-For', req.ip || 'unknown');
+    
     // Log request details for debugging
     console.log('Request headers:', JSON.stringify(req.headers, null, 2));
     
-    // If there's a body, log it (useful for debugging)
-    if (req.body) {
-      console.log('Request body:', JSON.stringify(req.body, null, 2));
+    // Only handle request body for methods that expect one
+    if (['POST', 'PUT', 'PATCH'].includes(req.method) && req.body && Object.keys(req.body).length > 0) {
+      try {
+        const bodyData = JSON.stringify(req.body);
+        console.log('Request body:', bodyData);
+        
+        // Make sure content-type is set
+        proxyReq.setHeader('Content-Type', 'application/json');
+        // Update content-length
+        proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyData));
+        // Write body to request
+        proxyReq.write(bodyData);
+        proxyReq.end();
+      } catch (error) {
+        console.error('Error handling request body:', error);
+      }
     }
   },
   onProxyRes: (proxyRes, req, res) => {
     // Log the response status code from the backend
     console.log(`Backend responded with status: ${proxyRes.statusCode} for ${req.method} ${req.url}`);
+    
+    // For any response, add debugging headers
+    res.setHeader('X-Proxy-Response-Time', Date.now());
+    res.setHeader('X-Proxied-By', 'token-frontend-proxy');
     
     // For error responses, log more details
     if (proxyRes.statusCode >= 400) {
@@ -103,11 +142,21 @@ const apiProxy = createProxyMiddleware({
   },
   onError: (err, req, res) => {
     console.error('Proxy error:', err);
+    
+    // Try to determine if it's a timeout
+    const isTimeout = err.code === 'ECONNRESET' || err.code === 'ETIMEDOUT' || err.message.includes('timeout');
+    
     // Send a friendly error response
     res.status(502).json({
-      error: 'Backend API Connection Error',
-      message: 'Unable to connect to the backend API service',
+      error: isTimeout ? 'Backend API Timeout' : 'Backend API Connection Error',
+      message: isTimeout 
+        ? 'The backend API took too long to respond. Render free tier services can sleep after inactivity and take time to wake up.'
+        : 'Unable to connect to the backend API service. The backend might be down or misconfigured.',
+      suggestion: isTimeout
+        ? 'Please try again in a moment while the backend service wakes up.'
+        : 'Please check that the backend service is running and properly configured.',
       details: err.message,
+      code: err.code,
       backendUrl: BACKEND_URL,
       path: req.path,
       originalUrl: req.originalUrl
@@ -115,8 +164,36 @@ const apiProxy = createProxyMiddleware({
   }
 });
 
+// Function to check if the backend is likely sleeping (free tier Render)
+const isBackendSleeping = async () => {
+  try {
+    // Try to make a simple HEAD request to see if the backend responds quickly
+    console.log(`Checking if backend is responding at ${BACKEND_URL}...`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+    
+    const response = await fetch(BACKEND_URL, {
+      method: 'HEAD',
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+    return false; // If we get here, the backend is responding
+  } catch (err) {
+    console.log(`Backend may be sleeping: ${err.message}`);
+    return true; // If we get an error, backend is likely sleeping
+  }
+};
+
 // Try a direct healthcheck to the backend on startup
 const checkBackendHealth = async () => {
+  // First check if the backend is likely sleeping
+  const sleeping = await isBackendSleeping();
+  if (sleeping) {
+    console.log('Backend appears to be in sleep mode (normal for free Render tier).');
+    console.log('The first request may take up to 30-60 seconds to wake up the service.');
+  }
+  
   // List of potential health check endpoints to try
   const healthEndpoints = [
     '/api/health',
@@ -132,14 +209,19 @@ const checkBackendHealth = async () => {
       const url = `${BACKEND_URL}${endpoint}`;
       console.log(`Checking backend health at ${url}...`);
       
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
       const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json'
         },
-        timeout: 5000 // 5 second timeout
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       
       if (response.ok) {
         console.log(`Backend health check successful at ${endpoint}!`);
@@ -152,6 +234,7 @@ const checkBackendHealth = async () => {
         }
         
         // If we found a working endpoint, no need to try others
+        console.log('Backend service is running and responding to health checks.');
         return;
       } else {
         console.log(`Backend endpoint ${endpoint} returned status: ${response.status}`);
@@ -163,6 +246,7 @@ const checkBackendHealth = async () => {
   
   // If we get here, none of the health endpoints worked
   console.error('Could not connect to any backend health endpoints. Please check your backend URL configuration.');
+  console.log('The backend may be in sleep mode (normal for free Render tier) or misconfigured.');
 };
 
 // Proxy API requests to the backend server

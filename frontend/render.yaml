@@ -15,6 +15,8 @@ services:
         value: production
       - key: BACKEND_URL
         value: "https://token-system-api.onrender.com"
+      - key: NODE_OPTIONS
+        value: "--max-http-header-size=16384"
     headers:
       - path: /*
         name: Access-Control-Allow-Origin
@@ -24,4 +26,12 @@ services:
         value: "GET, POST, PUT, DELETE, OPTIONS"
       - path: /*
         name: Access-Control-Allow-Headers
-        value: "Origin, X-Requested-With, Content-Type, Accept, Authorization" 
+        value: "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+      - path: /*
+        name: Cache-Control
+        value: "no-cache, no-store, must-revalidate"
+    autoDeploy: true
+    numInstances: 1
+    plan: free
+    healthCheckPath: /api-status
+    sleepApplication: false 
