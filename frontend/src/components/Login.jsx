@@ -1,16 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import '../styles/Login.css';
-import { getApiUrl, fetchWithAuth } from '../utils/api';
+import { getApiUrl, fetchWithAuth, USE_MOCK_API } from '../utils/api';
 
 const Login = ({ onLogin }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState(USE_MOCK_API ? 'test@example.com' : '');
+  const [password, setPassword] = useState(USE_MOCK_API ? 'password123' : '');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showContactForm, setShowContactForm] = useState(false);
   const [contactEmail, setContactEmail] = useState('');
   const [contactMessage, setContactMessage] = useState('');
   const [contactStatus, setContactStatus] = useState({ show: false, message: '', type: '' });
+
+  // Show mock API notice when it's enabled
+  useEffect(() => {
+    if (USE_MOCK_API) {
+      console.log("🔶 MOCK API MODE ENABLED - Using simulated responses");
+    }
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -68,9 +75,18 @@ const Login = ({ onLogin }) => {
     } catch (error) {
       console.error('Login error:', error);
       
-      // Show a connectivity error if the fetch operation failed
-      if (error.message.includes('NetworkError') || error.message.includes('Failed to fetch')) {
-        setError('Unable to connect to the server. Please check your internet connection and try again.');
+      // Special handling for backend connectivity issues
+      if (error.message.includes('NetworkError') || 
+          error.message.includes('Failed to fetch') || 
+          error.message.includes('empty response') ||
+          error.message.includes('server encountered an error')) {
+        
+        // Suggest using test credentials if not already using them
+        if (email !== 'test@example.com' && !USE_MOCK_API) {
+          setError(`Unable to connect to the server. Try using test credentials (test@example.com / password123) or contact your administrator.`);
+        } else {
+          setError('Unable to connect to the server. Please check your internet connection and try again.');
+        }
       } else {
         setError(error.message || 'Failed to login. Please try again.');
       }
@@ -150,8 +166,17 @@ const Login = ({ onLogin }) => {
   return (
     <div className="auth-form-container">
       <div className="auth-form-box">
-        <h2> Login</h2>
+        <h2>Login</h2>
         {error && <div className="error-message">{error}</div>}
+        
+        {/* Show mock API notice when enabled */}
+        {USE_MOCK_API && (
+          <div className="info-message" style={{ backgroundColor: '#fff3cd', padding: '10px', marginBottom: '15px', borderRadius: '4px' }}>
+            <strong>Development Mode:</strong> Using simulated API responses. <br />
+            Login with: test@example.com / password123
+          </div>
+        )}
+        
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label htmlFor="email">Email:</label>

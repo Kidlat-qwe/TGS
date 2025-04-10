@@ -6,6 +6,37 @@ export const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
 // Get the backend URL for direct fetches
 export const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "https://token-system-api.onrender.com";
 
+// Flag to enable mock API when the backend is down
+export const USE_MOCK_API = true; // Set to true to use mock responses while backend is down
+
+// Mock API responses for offline development
+const MOCK_RESPONSES = {
+  'auth/login': {
+    success: {
+      token: 'mock-jwt-token-for-development-xyz.abc.123',
+      user: {
+        email: 'test@example.com',
+        uid: 'mock-uid-123',
+        role: 'user',
+        accessType: 'unlimited',
+        systemAccess: 'both',
+      }
+    },
+    error: {
+      status: 401,
+      error: 'Invalid credentials',
+      message: 'The email or password you entered is incorrect'
+    }
+  },
+  'health': {
+    success: {
+      status: 'healthy',
+      uptime: '3d 2h 45m',
+      version: '1.0.0'
+    }
+  }
+};
+
 // Helper function to get the full API URL for a given endpoint
 export const getApiUrl = (endpoint) => {
   // Remove any leading slash from the endpoint to avoid double slashes
@@ -33,9 +64,46 @@ export const getEvaluationApiUrl = (endpoint) => {
   return `${API_BASE_URL}/evaluation/${cleanEndpoint}`;
 };
 
+// Helper function to simulate API responses when backend is down
+const getMockResponse = (endpoint, options = {}) => {
+  console.log(`🔶 Using mock API response for: ${endpoint}`);
+  
+  // Extract the base endpoint without query parameters
+  const baseEndpoint = endpoint.split('?')[0];
+  
+  // Check if we have a mock for this endpoint
+  if (!MOCK_RESPONSES[baseEndpoint]) {
+    console.warn(`No mock response defined for: ${baseEndpoint}`);
+    return Promise.reject(new Error(`No mock response available for ${baseEndpoint}`));
+  }
+  
+  // For login, check credentials
+  if (baseEndpoint === 'auth/login' && options.method === 'POST') {
+    try {
+      const body = JSON.parse(options.body);
+      if (body.email === 'test@example.com' && body.password === 'password123') {
+        return Promise.resolve(MOCK_RESPONSES[baseEndpoint].success);
+      } else {
+        const error = MOCK_RESPONSES[baseEndpoint].error;
+        return Promise.reject(new Error(error.message || 'Invalid credentials'));
+      }
+    } catch (e) {
+      return Promise.reject(new Error('Invalid request body'));
+    }
+  }
+  
+  // For other endpoints, return success response
+  return Promise.resolve(MOCK_RESPONSES[baseEndpoint].success);
+};
+
 // Helper function to make authorized API requests with proper error handling
 export const fetchWithAuth = async (endpoint, options = {}) => {
   try {
+    // If mock API is enabled, use mock responses
+    if (USE_MOCK_API) {
+      return await getMockResponse(endpoint, options);
+    }
+    
     const token = localStorage.getItem("token");
 
     // Set up default headers
