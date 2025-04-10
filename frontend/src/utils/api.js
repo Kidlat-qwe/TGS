@@ -34,6 +34,18 @@ const MOCK_RESPONSES = {
       uptime: '3d 2h 45m',
       version: '1.0.0'
     }
+  },
+  'admin-contacts': {
+    success: {
+      id: 'mock-contact-123',
+      status: 'received',
+      message: 'Your message has been received and will be reviewed by an administrator.'
+    },
+    error: {
+      status: 400,
+      error: 'Invalid request',
+      message: 'Please provide a valid email and message.'
+    }
   }
 };
 

@@ -16,6 +16,9 @@ const Login = ({ onLogin }) => {
   useEffect(() => {
     if (USE_MOCK_API) {
       console.log("🔶 MOCK API MODE ENABLED - Using simulated responses");
+      // Pre-fill test credentials when in mock mode
+      setEmail('test@example.com');
+      setPassword('password123');
     }
   }, []);
 
@@ -25,48 +28,14 @@ const Login = ({ onLogin }) => {
     setLoading(true);
     
     try {
-      const response = await fetch(getApiUrl('auth/login'), {
+      // Use fetchWithAuth instead of direct fetch to enable mock API support
+      const data = await fetchWithAuth('auth/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
         body: JSON.stringify({ email, password }),
       });
 
-      // Check for empty response before trying to parse JSON
-      const responseText = await response.text();
-      let data;
-      
-      try {
-        // Only try to parse as JSON if there's actual content
-        data = responseText ? JSON.parse(responseText) : {};
-      } catch (jsonError) {
-        console.error('Error parsing JSON response:', jsonError, 'Raw response:', responseText);
-        
-        if (!responseText || responseText.trim() === '') {
-          throw new Error('Server returned an empty response. The backend might be unavailable or experiencing issues.');
-        } else {
-          throw new Error('The server response was not valid. This might indicate a backend issue.');
-        }
-      }
-
-      if (!response.ok) {
-        // Handle specific error cases
-        if (response.status === 401) {
-          throw new Error('Invalid email or password. Please try again.');
-        } else if (response.status === 403) {
-          throw new Error('Your account is not approved yet or has been disabled.');
-        } else if (response.status >= 500) {
-          throw new Error('The server encountered an error. Please try again later.');
-        }
-        
-        // Use the error message from the response if available
-        throw new Error(data.error || data.message || `Login failed with status ${response.status}`);
-      }
-
       // Check if the response contains a token
-      if (!data.token) {
+      if (!data || !data.token) {
         throw new Error('No authentication token received. Please try again.');
       }
 
@@ -105,24 +74,16 @@ const Login = ({ onLogin }) => {
     
     try {
       setLoading(true);
-      const response = await fetch(getApiUrl('admin-contacts'), {
+      // Use fetchWithAuth instead of direct fetch
+      const data = await fetchWithAuth('admin-contacts', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ 
           email: contactEmail.trim(), 
           message: contactMessage.trim(),
           subject: 'Registration Assistance Request'
         }),
       });
-
-      const data = await response.json();
       
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to send message');
-      }
-
       setContactStatus({
         show: true,
         message: 'Your message has been sent. An administrator will contact you shortly.',
