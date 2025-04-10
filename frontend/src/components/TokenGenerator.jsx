@@ -22,6 +22,7 @@ const TokenGenerator = ({ onLogout }) => {
   const [hasPendingNotification, setHasPendingNotification] = useState(false);
   const [dailyTokensCreated, setDailyTokensCreated] = useState(0);
   const [isGeneratingToken, setIsGeneratingToken] = useState(false);
+  const [dailyTokens, setDailyTokens] = useState([]);
 
   // Get current user data from the token
   useEffect(() => {
@@ -228,52 +229,75 @@ const TokenGenerator = ({ onLogout }) => {
     }
   };
 
-  // Calculate daily tokens usage
-  const calculateDailyTokensUsage = (tokensList) => {
-    // Skip calculation for admin users - they have unlimited tokens
-    if (currentUser && currentUser.role === 'admin') {
-      setDailyTokensCreated(0);
+  // Calculate daily token usage
+  const calculateDailyTokensUsage = (tokensData) => {
+    if (!tokensData || tokensData.length === 0) {
+      setDailyTokens([]);
       return;
     }
 
-    // Get today's date at midnight for comparison
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    // Filter tokens created today
-    const todayTokens = tokensList.filter(token => {
-      const tokenDate = new Date(token.createdAt);
-      return tokenDate >= today;
+    // Group tokens by date
+    const tokensByDate = {};
+    
+    tokensData.forEach(token => {
+      // Ensure token has created property and it's valid
+      if (!token.created) return;
+      
+      // Extract date part from created timestamp
+      const date = new Date(token.created).toISOString().split('T')[0];
+      
+      if (!tokensByDate[date]) {
+        tokensByDate[date] = { total: 0, used: 0 };
+      }
+      
+      tokensByDate[date].total += 1;
+      // Check if token is used
+      if (token.status === 'used') {
+        tokensByDate[date].used += 1;
+      }
     });
 
-    setDailyTokensCreated(todayTokens.length);
+    // Convert to array format needed for chart
+    const dailyData = Object.keys(tokensByDate).map(date => ({
+      date,
+      total: tokensByDate[date].total,
+      used: tokensByDate[date].used,
+    }));
+
+    // Sort by date (newest first)
+    dailyData.sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    // Limit to last 7 days
+    setDailyTokens(dailyData.slice(0, 7));
   };
 
+  // Fetch tokens from API
   const fetchTokens = async () => {
     try {
-      const token = localStorage.getItem('token');
-      console.log('Fetching tokens with auth token:', token ? 'present' : 'missing');
-
-      const response = await fetch(getApiUrl('tokens'), {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        credentials: 'include',
+      setError('');
+      // Use fetchWithAuth instead of direct fetch to enable mock API support
+      const data = await fetchWithAuth('tokens', {
+        method: 'GET'
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to fetch tokens');
+      
+      if (data && data.tokens) {
+        setTokens(data.tokens);
+        // Calculate daily token usage
+        calculateDailyTokensUsage(data.tokens);
+        return true;
+      } else {
+        // If there's no data or token structure is incorrect
+        console.error('Invalid token data received:', data);
+        // Use empty array instead of showing error to user
+        setTokens([]);
+        return false;
       }
-
-      const data = await response.json();
-      setTokens(data);
-
-      // Calculate daily tokens usage based on fetched tokens
-      calculateDailyTokensUsage(data);
     } catch (error) {
       console.error('Error fetching tokens:', error);
-      setError(error.message);
+      setError('Failed to fetch tokens. Please try again later.');
+      // Use empty array for tokens if fetch fails
+      setTokens([]);
+      return false;
     }
   };
 

@@ -44,6 +44,15 @@ const MOCK_RESPONSES = {
       mock: true
     }
   },
+  'tokens': {
+    success: {
+      tokens: [
+        { id: 'mock-token-1', code: 'ABC123', created: new Date().toISOString(), status: 'valid' },
+        { id: 'mock-token-2', code: 'DEF456', created: new Date().toISOString(), status: 'valid' },
+        { id: 'mock-token-3', code: 'GHI789', created: new Date().toISOString(), status: 'used' }
+      ]
+    }
+  },
   'admin-contacts': {
     success: {
       id: 'mock-contact-123',

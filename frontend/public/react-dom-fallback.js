@@ -8,6 +8,14 @@
 (function() {
   console.log('React DOM Fallback script loaded');
   
+  // Prevent infinite refresh loop
+  if (localStorage.getItem('react-dom-fallback-loaded')) {
+    console.log('Already attempted to load fallback, skipping to prevent refresh loop');
+    // Clear any reload attempts that might be causing loops
+    localStorage.removeItem('react-dom-reload-attempt');
+    return;
+  }
+  
   // Check if we need to use the fallback
   const needsFallback = 
     !window.React || 
@@ -17,6 +25,9 @@
   
   if (needsFallback) {
     console.log('Loading React DOM from CDN fallback...');
+    
+    // Mark that we've attempted to load the fallback to prevent loops
+    localStorage.setItem('react-dom-fallback-loaded', Date.now());
     
     // Create script elements for React and ReactDOM
     const reactScript = document.createElement('script');
@@ -34,9 +45,14 @@
     // Mark that we've used the fallback
     localStorage.setItem('using-react-dom-fallback', 'true');
     
-    // Reload the page after a delay to let the scripts load
-    setTimeout(() => {
-      window.location.reload();
-    }, 2000);
+    // Only reload once
+    if (!localStorage.getItem('page-reloaded-for-fallback')) {
+      localStorage.setItem('page-reloaded-for-fallback', 'true');
+      
+      // Reload the page after a delay to let the scripts load
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+    }
   }
 })(); 
