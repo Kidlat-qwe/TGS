@@ -1,0 +1,15 @@
+# Render deployment configuration
+services:
+  - type: web
+    name: token-system
+    env: node
+    buildCommand: npm install && cd frontend && npm install && npm run build
+    startCommand: cd backend && node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        sync: false  # Let Render set this automatically
+      - key: RENDER
+        value: true
+    healthCheckPath: /health 

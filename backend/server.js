@@ -163,19 +163,18 @@ global.savePersistentData = savePersistentData;
 const app = express();
 
 // Get PORT dynamically from environment variables
-// For Render and other cloud platforms, we need to use their PORT environment variable
-let PORT = process.env.PORT;
+// On Render, this will be set automatically
+const PORT = process.env.PORT || 5000;
 
-// If we're in a Render environment, ensure we're using their PORT
-if (process.env.RENDER && !PORT) {
-  console.warn('⚠️ No PORT environment variable found but running on Render! Using default 10000.');
-  PORT = 10000; // Render's common default port
-} else if (!PORT) {
-  // Local development default
-  PORT = 5000;
-}
+// Explicitly detect Render environment
+const isRender = Boolean(process.env.RENDER);
+const isProduction = process.env.NODE_ENV === 'production' || isRender || process.env.REPL_SLUG;
 
-console.log(`🔌 Using PORT: ${PORT} (source: ${process.env.PORT ? 'environment variable' : 'default value'})`);
+// Log environment information
+console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+console.log(`Running on Render: ${isRender ? 'Yes' : 'No'}`);
+console.log(`Production mode: ${isProduction ? 'Yes' : 'No'}`);
+console.log(`Using PORT: ${PORT}`);
 
 // Maximum number of connection retries
 const MAX_RETRIES = 5;
@@ -311,8 +310,21 @@ app.use('/api/grading/student-status', gradingAuthMiddleware, gradingStudentStat
 
 // ===== UTILITY ROUTES =====
 
-// Public health check endpoint (no auth required)
+// Simple public health check (no auth required)
 app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    service: 'token-system',
+    version: '1.0.0',
+    environment: process.env.NODE_ENV || 'development',
+    port: PORT,
+    render: Boolean(process.env.RENDER)
+  });
+});
+
+// Public health check endpoint (no auth required)
+app.get('/api/health-check', (req, res) => {
   res.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
@@ -455,9 +467,7 @@ app.get('/api/test-firebase', async (req, res) => {
 
 // ===== SERVE STATIC FILES IN PRODUCTION MODE =====
 
-// Check if we are in production mode (NODE_ENV === 'production' or running on Replit)
-const isProduction = process.env.NODE_ENV === 'production' || process.env.REPL_SLUG;
-
+// Use the isProduction variable already defined at the top of the file
 if (isProduction) {
   console.log('\n📦 Running in production mode - Serving static frontend files');
 
