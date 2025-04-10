@@ -124,7 +124,7 @@ const jwtConfig = {
  */
 const serverConfig = {
   get port() { return getEnv('PORT', 'EVALUATION_', 3002); },
-  get frontendUrl() { return getEnv('FRONTEND_URL', 'EVALUATION_', 'http://localhost:5173'); }
+  get frontendUrl() { return getEnv('FRONTEND_URL', 'EVALUATION_', 'http://localhost:3000'); }
 };
 
 /**

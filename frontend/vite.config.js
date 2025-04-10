@@ -27,7 +27,7 @@ export default defineConfig(({ command, mode }) => {
       'import.meta.env.VITE_API_BASE': JSON.stringify('/api'),
     },
     server: {
-      port: parseInt(process.env.VITE_PORT || 5173),
+      port: 3000, // Explicitly set port to 3000 instead of relying on env variables
       host: '0.0.0.0', // Make it accessible from outside the container
       proxy: {
         // In development, always proxy API requests to the backend

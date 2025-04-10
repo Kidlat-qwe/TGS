@@ -84,7 +84,7 @@ export const createTransporter = () => {
 
 // Generate the approval email HTML template
 const generateApprovalEmail = (user, loginUrl) => {
-  const appUrl = loginUrl || process.env.APP_URL || 'http://localhost:5173';
+  const appUrl = loginUrl || process.env.APP_URL || 'http://localhost:3000';
   
   // Set access type text based on user's access
   let accessTypeText = 'unlimited access';
@@ -180,7 +180,7 @@ Hello,
 
 Great news! Your account has been approved by the administrator.
 
-You can now log in using your registered email and password at ${process.env.APP_URL || 'http://localhost:5173'}.
+You can now log in using your registered email and password at ${process.env.APP_URL || 'http://localhost:3000'}.
 
 Thank you!
 
