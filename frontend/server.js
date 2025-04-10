@@ -49,9 +49,94 @@ app.get('/api-status', (req, res) => {
   res.json({
     status: 'Frontend server is running',
     backendUrl: BACKEND_URL,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    mockEnabled: true
   });
 });
+
+// Add mock API response middleware
+const mockResponses = {
+  '/api/health': {
+    status: 'healthy',
+    uptime: '3d 2h 45m',
+    version: '1.0.0',
+    mock: true
+  },
+  '/api/auth/login': (req) => {
+    try {
+      const { email, password } = req.body;
+      if (email === 'test@example.com' && password === 'password123') {
+        return {
+          token: 'mock-jwt-token-for-development-xyz.abc.123',
+          user: {
+            email: 'test@example.com',
+            uid: 'mock-uid-123',
+            role: 'user',
+            accessType: 'unlimited',
+            systemAccess: 'both',
+          }
+        };
+      } else {
+        return { status: 401, error: 'Invalid credentials', message: 'The email or password you entered is incorrect' };
+      }
+    } catch (error) {
+      return { status: 400, error: 'Bad request', message: 'Invalid request format' };
+    }
+  },
+  '/api/tokens': {
+    tokens: [
+      { id: 'mock-token-1', code: 'ABC123', created: new Date().toISOString(), status: 'valid' },
+      { id: 'mock-token-2', code: 'DEF456', created: new Date().toISOString(), status: 'valid' },
+      { id: 'mock-token-3', code: 'GHI789', created: new Date().toISOString(), status: 'used' }
+    ]
+  }
+};
+
+// Mock API middleware - serves mock responses when backend is down
+app.use('/api', (req, res, next) => {
+  // Check if we should use mock responses
+  if (isBackendDown) {
+    const path = req.path;
+    const fullPath = `/api${path}`;
+    
+    console.log(`Backend is down, using mock response for: ${fullPath}`);
+    
+    // Check if we have a mock for this endpoint
+    if (mockResponses[fullPath]) {
+      const mockResponse = typeof mockResponses[fullPath] === 'function' 
+        ? mockResponses[fullPath](req) 
+        : mockResponses[fullPath];
+      
+      // If the mock response has a status code, use it
+      if (mockResponse.status && mockResponse.status >= 400) {
+        return res.status(mockResponse.status).json(mockResponse);
+      }
+      
+      // Otherwise return success
+      return res.json(mockResponse);
+    }
+    
+    // Add fallback for health endpoints
+    if (path.includes('health')) {
+      return res.json(mockResponses['/api/health']);
+    }
+    
+    // If no specific mock, return a generic message
+    console.log(`No mock response for ${fullPath}, returning generic response`);
+    return res.json({
+      mock: true,
+      message: 'This is a mock response as the backend is currently unavailable',
+      path: req.path,
+      method: req.method
+    });
+  }
+  
+  // If backend is up, proceed to proxy
+  next();
+});
+
+// Flag to track backend status
+let isBackendDown = false;
 
 // Create API proxy middleware with enhanced error handling
 const apiProxy = createProxyMiddleware({
@@ -155,12 +240,37 @@ const apiProxy = createProxyMiddleware({
     const isTimeout = err.code === 'ECONNRESET' || err.code === 'ETIMEDOUT' || err.message.includes('timeout');
     const isConnectionRefused = err.code === 'ECONNREFUSED';
     
+    // Set the backend down flag
+    isBackendDown = true;
+    console.log('❌ Backend appears to be down. Switching to mock API mode.');
+    
     // If connection is refused, try to use mock API
     if (isConnectionRefused) {
       console.log('Backend server is not running. Consider enabling mock API mode in api.js');
     }
     
-    // Send a friendly error response
+    // Try to serve a mock response for the current request
+    const path = req.path;
+    const fullPath = `/api${path}`;
+    
+    // Check if we have a mock for this endpoint
+    if (mockResponses[fullPath]) {
+      const mockResponse = typeof mockResponses[fullPath] === 'function' 
+        ? mockResponses[fullPath](req) 
+        : mockResponses[fullPath];
+      
+      console.log(`Serving mock response for ${fullPath} after proxy error`);
+      
+      // If the mock response has a status code, use it
+      if (mockResponse.status && mockResponse.status >= 400) {
+        return res.status(mockResponse.status).json(mockResponse);
+      }
+      
+      // Otherwise return success
+      return res.json(mockResponse);
+    }
+    
+    // If no specific mock, send a friendly error response
     res.status(502).json({
       error: isTimeout ? 'Backend API Timeout' : 'Backend API Connection Error',
       message: isTimeout 
@@ -177,7 +287,8 @@ const apiProxy = createProxyMiddleware({
       code: err.code,
       backendUrl: BACKEND_URL,
       path: req.path,
-      originalUrl: req.originalUrl
+      originalUrl: req.originalUrl,
+      mockMode: true
     });
   }
 });
@@ -203,6 +314,32 @@ const isBackendSleeping = async () => {
   }
 };
 
+// Function to check if the backend is healthy
+const isBackendHealthy = async () => {
+  try {
+    // Try a simple GET request to the root endpoint
+    console.log(`Checking if backend is healthy at ${BACKEND_URL}...`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    
+    const response = await fetch(BACKEND_URL, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+    
+    return response.status < 500; // Consider any non-500 response as "healthy" for this check
+  } catch (err) {
+    console.log(`Backend health check failed: ${err.message}`);
+    return false; // Backend is not healthy
+  }
+};
+
 // Try a direct healthcheck to the backend on startup
 const checkBackendHealth = async () => {
   // First check if the backend is likely sleeping
@@ -221,6 +358,8 @@ const checkBackendHealth = async () => {
     '/api/v1/health',
     '/'
   ];
+  
+  let backendHealthy = false;
   
   for (const endpoint of healthEndpoints) {
     try {
@@ -253,7 +392,8 @@ const checkBackendHealth = async () => {
         
         // If we found a working endpoint, no need to try others
         console.log('Backend service is running and responding to health checks.');
-        return;
+        backendHealthy = true;
+        break;
       } else {
         console.log(`Backend endpoint ${endpoint} returned status: ${response.status}`);
       }
@@ -263,8 +403,31 @@ const checkBackendHealth = async () => {
   }
   
   // If we get here, none of the health endpoints worked
-  console.error('Could not connect to any backend health endpoints. Please check your backend URL configuration.');
-  console.log('The backend may be in sleep mode (normal for free Render tier) or misconfigured.');
+  if (!backendHealthy) {
+    console.error('Could not connect to any backend health endpoints. Please check your backend URL configuration.');
+    console.log('The backend may be in sleep mode (normal for free Render tier) or misconfigured.');
+    console.log('ENABLING MOCK API MODE - all API requests will be served with mock data');
+    isBackendDown = true;
+  } else {
+    isBackendDown = false;
+  }
+  
+  // Schedule periodic health checks
+  setInterval(async () => {
+    try {
+      const wasDown = isBackendDown;
+      const isHealthy = await isBackendHealthy();
+      isBackendDown = !isHealthy;
+      
+      if (wasDown && isHealthy) {
+        console.log('✅ Backend is now available! Switching to real API.');
+      } else if (!wasDown && !isHealthy) {
+        console.log('❌ Backend is now unavailable! Switching to mock API.');
+      }
+    } catch (error) {
+      console.error('Error during periodic health check:', error);
+    }
+  }, 60000); // Check every minute
 };
 
 // Proxy API requests to the backend server
