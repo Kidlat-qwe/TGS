@@ -39,8 +39,9 @@ export default defineConfig(({ command, mode }) => {
       },
       // Disable HMR for compatibility with Replit and Render
       hmr: false,
-      // Allow all hosts
-      allowedHosts: 'all'
+      // In production, allow all hosts to prevent deployment issues
+      // In development, be more specific
+      allowedHosts: isProduction ? 'all' : ['localhost', '127.0.0.1']
     }
   }
 })
