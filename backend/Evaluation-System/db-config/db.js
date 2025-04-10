@@ -12,24 +12,48 @@ const __dirname = path.dirname(__filename);
 
 const sleep = promisify(setTimeout);
 
-// Load environment variables from the Evaluation-System .env file
-const envPath = path.resolve(__dirname, '../.env');
-if (fs.existsSync(envPath)) {
-  console.log(`Loading environment variables from: ${envPath}`);
-  dotenv.config({ path: envPath });
-  
-  // Debug: Log loaded database configuration variables
-  console.log('Evaluation System Environment Variables:');
-  console.log(`- PGUSER: ${process.env.PGUSER ? '✅ Set' : '❌ Not set'}`);
-  console.log(`- PGPASSWORD: ${process.env.PGPASSWORD ? '✅ Set' : '❌ Not set'}`);
-  console.log(`- PGHOST: ${process.env.PGHOST || 'Not set'}`);
-  console.log(`- PGDATABASE: ${process.env.PGDATABASE || 'Not set'}`);
-  console.log(`- PGPORT: ${process.env.PGPORT || '5432 (default)'}`);
-  console.log(`- DATABASE_URL: ${process.env.DATABASE_URL ? '✅ Set' : '❌ Not set'}`);
-} else {
-  console.warn(`Warning: .env file not found at ${envPath}, using default environment variables`);
-  dotenv.config();
+// Load environment variables with multiple fallback mechanisms
+// First load from process root (for Render and other deployment platforms)
+dotenv.config();
+
+// Then try to load from the backend directory
+const backendEnvPath = path.resolve(__dirname, '../../.env');
+if (fs.existsSync(backendEnvPath)) {
+  console.log(`DB Config: Loading environment variables from: ${backendEnvPath}`);
+  dotenv.config({ path: backendEnvPath });
 }
+
+// Finally try to load from the Evaluation-System directory
+const evaluationEnvPath = path.resolve(__dirname, '../.env');
+if (fs.existsSync(evaluationEnvPath)) {
+  console.log(`DB Config: Loading environment variables from: ${evaluationEnvPath}`);
+  dotenv.config({ path: evaluationEnvPath });
+} else {
+  console.warn(`DB Config: Warning: .env file not found at ${evaluationEnvPath}, using environment variables from parent directories or deployment platform`);
+}
+
+// Check for prefixed environment variables (from main backend .env)
+// This helps with deployment platforms where all variables are in a single environment
+if (!process.env.PGUSER && process.env.EVALUATION_PGUSER) {
+  process.env.PGUSER = process.env.EVALUATION_PGUSER;
+  process.env.PGPASSWORD = process.env.EVALUATION_PGPASSWORD;
+  process.env.PGHOST = process.env.EVALUATION_PGHOST;
+  process.env.PGDATABASE = process.env.EVALUATION_PGDATABASE;
+  process.env.PGPORT = process.env.EVALUATION_PGPORT;
+  process.env.PGSSL = process.env.EVALUATION_PGSSL;
+  process.env.DATABASE_URL = process.env.EVALUATION_DATABASE_URL;
+  
+  console.log('Using prefixed environment variables from main backend .env file');
+}
+
+// Debug: Log loaded database configuration variables
+console.log('Evaluation System Environment Variables:');
+console.log(`- PGUSER: ${process.env.PGUSER ? '✅ Set' : '❌ Not set'}`);
+console.log(`- PGPASSWORD: ${process.env.PGPASSWORD ? '✅ Set' : '❌ Not set'}`);
+console.log(`- PGHOST: ${process.env.PGHOST || 'Not set'}`);
+console.log(`- PGDATABASE: ${process.env.PGDATABASE || 'Not set'}`);
+console.log(`- PGPORT: ${process.env.PGPORT || '5432 (default)'}`);
+console.log(`- DATABASE_URL: ${process.env.DATABASE_URL ? '✅ Set' : '❌ Not set'}`);
 
 // Maximum number of connection retries
 const MAX_RETRIES = 5;

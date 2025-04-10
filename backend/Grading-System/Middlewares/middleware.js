@@ -3,18 +3,42 @@ import { pool } from '../db.js';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import cookieParser from 'cookie-parser';
+import fs from 'fs';
 
 // Get directory name in ES module
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load environment variables from multiple possible locations
-dotenv.config(); // Load from process root
-dotenv.config({ path: path.join(__dirname, '..', '.env') }); // Load from Grading-System
-dotenv.config({ path: path.join(__dirname, '..', '..', '.env') }); // Load from backend
+// Load environment variables with multiple fallback mechanisms
+// First load from process root (for Render and other deployment platforms)
+dotenv.config();
+
+// Then try to load from the backend directory
+const backendEnvPath = path.resolve(__dirname, '../../.env');
+if (fs.existsSync(backendEnvPath)) {
+  console.log(`Grading Middleware: Loading environment variables from: ${backendEnvPath}`);
+  dotenv.config({ path: backendEnvPath });
+}
+
+// Finally try to load from the Grading-System directory
+const gradingEnvPath = path.resolve(__dirname, '../.env');
+if (fs.existsSync(gradingEnvPath)) {
+  console.log(`Grading Middleware: Loading environment variables from: ${gradingEnvPath}`);
+  dotenv.config({ path: gradingEnvPath });
+} else {
+  console.warn(`Grading Middleware: Warning: .env file not found at ${gradingEnvPath}, using environment variables from parent directories or deployment platform`);
+}
+
+// Check for prefixed environment variables (from main backend .env)
+// This helps with deployment platforms where all variables are in a single environment
+if (!process.env.JWT_SECRET && process.env.GRADING_JWT_SECRET) {
+  process.env.JWT_SECRET = process.env.GRADING_JWT_SECRET;
+  console.log('Using prefixed JWT_SECRET from main backend .env file');
+}
 
 // Get JWT secret with fallbacks
-const JWT_SECRET = process.env.JWT_SECRET || process.env.GRADING_JWT_SECRET || 'your-secret-key-here';
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-here';
 
 console.log('Grading System JWT_SECRET loaded:', JWT_SECRET ? '(secret is set)' : '(warning: secret not set)');
 
@@ -24,64 +48,81 @@ export const attachDb = (req, res, next) => {
     next();
 };
 
-// Authentication middleware
+/**
+ * Validates a token for the Grading System
+ * @param {string} token - JWT token to validate
+ * @returns {Object} Decoded token payload if valid
+ * @throws {Error} If token is invalid or not authorized for grading system
+ */
+const validateGradingToken = (token) => {
+    if (!token) {
+        throw new Error('No token provided');
+    }
+    
+    try {
+        // Verify the token signature and expiration
+        const decoded = jwt.verify(token, JWT_SECRET);
+        
+        // Check if token is for grading system or unspecified (for backward compatibility)
+        if (decoded.system && decoded.system !== 'grading') {
+            throw new Error(`Token not authorized for grading system (system: ${decoded.system})`);
+        }
+        
+        return decoded;
+    } catch (error) {
+        if (error.name === 'JsonWebTokenError') {
+            throw new Error('Invalid token signature');
+        } else if (error.name === 'TokenExpiredError') {
+            throw new Error('Token has expired');
+        } else {
+            throw error;
+        }
+    }
+};
+
+/**
+ * Middleware to authenticate and validate tokens for the Grading System
+ */
 export const authenticateToken = (req, res, next) => {
     try {
+        // Extract token from Authorization header
         const authHeader = req.headers['authorization'];
         const token = authHeader && authHeader.split(' ')[1];
 
-        if (!token) {
+        // Also check cookies if token not in header
+        const cookieToken = req.cookies?.auth_token;
+        
+        const finalToken = token || cookieToken;
+
+        if (!finalToken) {
             console.error('Authentication failed: No token provided');
-            return res.status(401).json({ error: 'Authentication required' });
+            return res.status(401).json({ 
+                error: 'Authentication required',
+                message: 'No authentication token provided'
+            });
         }
 
         // Log token details for debugging
-        console.log('Grading System - Token received:', token.substring(0, 10) + '...');
+        console.log('Grading System - Token received:', finalToken.substring(0, 10) + '...');
         console.log('Grading System - Verifying with JWT_SECRET:', JWT_SECRET.substring(0, 3) + '...');
 
-        jwt.verify(token, JWT_SECRET, (err, user) => {
-            if (err) {
-                console.error('Token verification failed:', err.name, err.message);
-
-                // Provide more specific error messages based on the type of JWT error
-                if (err.name === 'JsonWebTokenError') {
-                    return res.status(403).json({ 
-                        error: 'Invalid token', 
-                        details: 'The token signature is invalid',
-                        message: 'Please check that you are using the correct token for this system'
-                    });
-                } else if (err.name === 'TokenExpiredError') {
-                    return res.status(403).json({ 
-                        error: 'Token expired', 
-                        details: 'Your session has expired',
-                        message: 'Please obtain a new token'
-                    });
-                } else {
-                    return res.status(403).json({ 
-                        error: 'Invalid token', 
-                        details: err.message,
-                        message: 'There was a problem with your authentication token'
-                    });
-                }
-            }
-
+        try {
+            const decoded = validateGradingToken(finalToken);
+            
             // Log the token payload for debugging
-            console.log('Token payload:', JSON.stringify(user, null, 2));
-
-            // Check if token is for grading system
-            // More permissive check - allow tokens that don't specify a system or specify grading
-            if (user.system && user.system !== 'grading') {
-                console.error('Token system mismatch:', user.system);
-                return res.status(403).json({ 
-                    error: 'This token is not authorized for the grading system',
-                    details: `Token system: ${user.system}`,
-                    message: 'Please obtain a token specifically for the grading system'
-                });
-            }
-
-            req.user = user;
+            console.log('Token payload:', JSON.stringify(decoded, null, 2));
+            
+            req.user = decoded;
             next();
-        });
+        } catch (error) {
+            console.error('Token validation failed:', error.message);
+            
+            return res.status(403).json({ 
+                error: 'Authentication failed',
+                message: error.message,
+                details: 'Token validation failed'
+            });
+        }
     } catch (error) {
         console.error('Authentication middleware error:', error);
         res.status(500).json({ 

@@ -8,17 +8,28 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load environment variables from the Evaluation-System .env file
-const envPath = path.resolve(__dirname, '../.env');
-if (fs.existsSync(envPath)) {
-  console.log(`Auth Middleware: Loading environment variables from: ${envPath}`);
-  dotenv.config({ path: envPath });
-} else {
-  console.warn(`Auth Middleware: Warning: .env file not found at ${envPath}, using default environment variables`);
-  dotenv.config();
+// Load environment variables with multiple fallback mechanisms
+// First load from process root (for Render and other deployment platforms)
+dotenv.config();
+
+// Then try to load from the backend directory
+const backendEnvPath = path.resolve(__dirname, '../../.env');
+if (fs.existsSync(backendEnvPath)) {
+  console.log(`Auth Middleware: Loading environment variables from: ${backendEnvPath}`);
+  dotenv.config({ path: backendEnvPath });
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-here'; // Updated to match Token-System
+// Finally try to load from the Evaluation-System directory
+const evaluationEnvPath = path.resolve(__dirname, '../.env');
+if (fs.existsSync(evaluationEnvPath)) {
+  console.log(`Auth Middleware: Loading environment variables from: ${evaluationEnvPath}`);
+  dotenv.config({ path: evaluationEnvPath });
+} else {
+  console.warn(`Auth Middleware: Warning: .env file not found at ${evaluationEnvPath}, using environment variables from parent directories`);
+}
+
+// The JWT_SECRET should be available from one of the above sources
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-here';
 
 // Debug: Log the JWT_SECRET (first few chars only for security)
 console.log(`Auth Middleware: Using JWT_SECRET: ${JWT_SECRET ? (JWT_SECRET.substring(0, 5) + '...') : 'Not set'}`);
