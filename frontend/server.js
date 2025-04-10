@@ -133,9 +133,18 @@ const apiProxy = createProxyMiddleware({
           // Try to parse as JSON if possible
           const parsedBody = JSON.parse(responseBody);
           console.log('Error response body:', JSON.stringify(parsedBody, null, 2));
+          
+          // For 500 errors, display the actual error message from the backend
+          if (proxyRes.statusCode === 500) {
+            console.error('BACKEND SERVER ERROR (500):', parsedBody.message || parsedBody.error || 'Unknown server error');
+            console.error('This is an error from your backend server, not a connection issue.');
+          }
         } catch (e) {
           // Otherwise log as string
           console.log('Error response body (raw):', responseBody);
+          if (proxyRes.statusCode === 500) {
+            console.error('BACKEND SERVER ERROR (500) - Raw response:', responseBody);
+          }
         }
       });
     }

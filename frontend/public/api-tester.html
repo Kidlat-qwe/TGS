@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Connection Tester</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1 {
+      color: #333;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 10px;
+    }
+    .card {
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 20px;
+      margin-bottom: 20px;
+      background-color: #f9f9f9;
+    }
+    .controls {
+      margin-bottom: 20px;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    input, select {
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin-right: 10px;
+      width: 250px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    textarea {
+      width: 100%;
+      height: 100px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 8px;
+      margin-bottom: 10px;
+    }
+    .result {
+      background-color: #fff;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 15px;
+      margin-top: 20px;
+      white-space: pre-wrap;
+      overflow-x: auto;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .error {
+      color: #d32f2f;
+      font-weight: bold;
+    }
+    .success {
+      color: #388e3c;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>API Connection Tester</h1>
+  
+  <div class="card">
+    <h2>Test Backend API Connection</h2>
+    <p>Use this tool to test connections to your backend API directly.</p>
+    
+    <div class="controls">
+      <label for="backendUrl">Backend API URL:</label>
+      <input type="text" id="backendUrl" placeholder="Enter backend URL" 
+             value="https://token-system-api.onrender.com" style="width: 350px;">
+      
+      <label for="apiEndpoint">API Endpoint:</label>
+      <select id="apiEndpoint">
+        <option value="/api/health">Health Check (/api/health)</option>
+        <option value="/api/health-check">Alt Health Check (/api/health-check)</option>
+        <option value="/health">Root Health (/health)</option>
+        <option value="/api/auth/login">Login (/api/auth/login)</option>
+        <option value="/">Root Path (/)</option>
+        <option value="custom">Custom Endpoint...</option>
+      </select>
+      
+      <div id="customEndpointInput" style="display: none;">
+        <label for="customPath">Custom Path:</label>
+        <input type="text" id="customPath" placeholder="/your/custom/path">
+      </div>
+      
+      <label for="requestMethod">HTTP Method:</label>
+      <select id="requestMethod">
+        <option value="GET">GET</option>
+        <option value="POST">POST</option>
+        <option value="PUT">PUT</option>
+        <option value="DELETE">DELETE</option>
+      </select>
+      
+      <div id="requestBodyContainer">
+        <label for="requestBody">Request Body (JSON):</label>
+        <textarea id="requestBody" placeholder='{"email": "test@example.com", "password": "password123"}'></textarea>
+      </div>
+      
+      <button id="testButton">Test Connection</button>
+      <button id="clearButton">Clear Results</button>
+    </div>
+    
+    <div id="results">
+      <div class="result" id="resultOutput">Results will appear here...</div>
+    </div>
+  </div>
+  
+  <div class="card">
+    <h2>Frontend Server Status</h2>
+    <p>Test the frontend server's own API status endpoint.</p>
+    <button id="testFrontendButton">Check Frontend Status</button>
+    <div class="result" id="frontendResult">Results will appear here...</div>
+  </div>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Get references to elements
+      const backendUrlInput = document.getElementById('backendUrl');
+      const apiEndpointSelect = document.getElementById('apiEndpoint');
+      const customEndpointInput = document.getElementById('customEndpointInput');
+      const customPathInput = document.getElementById('customPath');
+      const requestMethodSelect = document.getElementById('requestMethod');
+      const requestBodyContainer = document.getElementById('requestBodyContainer');
+      const requestBodyTextarea = document.getElementById('requestBody');
+      const testButton = document.getElementById('testButton');
+      const clearButton = document.getElementById('clearButton');
+      const testFrontendButton = document.getElementById('testFrontendButton');
+      const resultOutput = document.getElementById('resultOutput');
+      const frontendResult = document.getElementById('frontendResult');
+      
+      // Show/hide custom endpoint input
+      apiEndpointSelect.addEventListener('change', function() {
+        if (this.value === 'custom') {
+          customEndpointInput.style.display = 'block';
+        } else {
+          customEndpointInput.style.display = 'none';
+        }
+        
+        // Auto-set request body for login
+        if (this.value === '/api/auth/login') {
+          requestMethodSelect.value = 'POST';
+          requestBodyTextarea.value = '{\n  "email": "test@example.com",\n  "password": "password123"\n}';
+          requestBodyContainer.style.display = 'block';
+        } else if (requestMethodSelect.value === 'GET') {
+          requestBodyContainer.style.display = 'none';
+        }
+      });
+      
+      // Show/hide request body based on method
+      requestMethodSelect.addEventListener('change', function() {
+        if (this.value === 'GET' || this.value === 'DELETE') {
+          requestBodyContainer.style.display = 'none';
+        } else {
+          requestBodyContainer.style.display = 'block';
+        }
+      });
+      
+      // Test backend connection
+      testButton.addEventListener('click', async function() {
+        resultOutput.innerHTML = 'Testing connection...';
+        resultOutput.className = 'result';
+        
+        try {
+          const backendUrl = backendUrlInput.value.trim();
+          let endpoint = apiEndpointSelect.value;
+          
+          if (endpoint === 'custom') {
+            endpoint = customPathInput.value.trim();
+            if (!endpoint.startsWith('/')) {
+              endpoint = '/' + endpoint;
+            }
+          }
+          
+          const method = requestMethodSelect.value;
+          const url = `${backendUrl}${endpoint}`;
+          
+          const options = {
+            method,
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+            }
+          };
+          
+          // Add body for POST/PUT/PATCH
+          if (method !== 'GET' && method !== 'DELETE') {
+            try {
+              const bodyText = requestBodyTextarea.value.trim();
+              if (bodyText) {
+                options.body = bodyText;
+              }
+            } catch (e) {
+              resultOutput.innerHTML = `<span class="error">Error parsing request body: ${e.message}</span>`;
+              return;
+            }
+          }
+          
+          const startTime = Date.now();
+          const response = await fetch(url, options);
+          const endTime = Date.now();
+          const duration = endTime - startTime;
+          
+          let responseBody;
+          try {
+            const text = await response.text();
+            try {
+              responseBody = JSON.parse(text);
+              responseBody = JSON.stringify(responseBody, null, 2);
+            } catch (e) {
+              responseBody = text;
+            }
+          } catch (e) {
+            responseBody = '(No response body)';
+          }
+          
+          // Build response headers string
+          let headersList = '';
+          response.headers.forEach((value, name) => {
+            headersList += `${name}: ${value}\n`;
+          });
+          
+          const statusClass = response.ok ? 'success' : 'error';
+          
+          resultOutput.innerHTML = `
+            <div class="${statusClass}">Status: ${response.status} ${response.statusText}</div>
+            <div>URL: ${url}</div>
+            <div>Method: ${method}</div>
+            <div>Response Time: ${duration}ms</div>
+            <div>Timestamp: ${new Date().toISOString()}</div>
+            <h3>Headers:</h3>
+            <pre>${headersList}</pre>
+            <h3>Response Body:</h3>
+            <pre>${responseBody}</pre>
+          `;
+        } catch (error) {
+          resultOutput.innerHTML = `<span class="error">Error: ${error.message}</span>`;
+        }
+      });
+      
+      // Test frontend status
+      testFrontendButton.addEventListener('click', async function() {
+        frontendResult.innerHTML = 'Checking frontend status...';
+        frontendResult.className = 'result';
+        
+        try {
+          const response = await fetch('/api-status');
+          
+          let responseBody;
+          try {
+            responseBody = await response.json();
+            responseBody = JSON.stringify(responseBody, null, 2);
+          } catch (e) {
+            const text = await response.text();
+            responseBody = text;
+          }
+          
+          const statusClass = response.ok ? 'success' : 'error';
+          
+          frontendResult.innerHTML = `
+            <div class="${statusClass}">Status: ${response.status} ${response.statusText}</div>
+            <div>Timestamp: ${new Date().toISOString()}</div>
+            <h3>Response:</h3>
+            <pre>${responseBody}</pre>
+          `;
+        } catch (error) {
+          frontendResult.innerHTML = `<span class="error">Error: ${error.message}</span>`;
+        }
+      });
+      
+      // Clear results
+      clearButton.addEventListener('click', function() {
+        resultOutput.innerHTML = 'Results will appear here...';
+        resultOutput.className = 'result';
+      });
+      
+      // Initialize display states
+      if (requestMethodSelect.value === 'GET' || requestMethodSelect.value === 'DELETE') {
+        requestBodyContainer.style.display = 'none';
+      }
+    });
+  </script>
+</body>
+</html> 
