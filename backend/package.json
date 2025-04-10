@@ -5,8 +5,9 @@
   "main": "server.js",
   "type": "module",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js",
+    "start": "node check-env.js && node server.js",
+    "dev": "node check-env.js && nodemon server.js",
+    "check-env": "node check-env.js",
     "setup-db": "psql -U postgres -d lca -f schema.sql",
     "setup-db-direct": "psql -U postgres -d lca -f schema-direct.sql",
     "create-db": "psql -U postgres -c 'CREATE DATABASE lca;'",

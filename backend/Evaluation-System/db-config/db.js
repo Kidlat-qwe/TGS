@@ -12,9 +12,15 @@ const __dirname = path.dirname(__filename);
 
 const sleep = promisify(setTimeout);
 
+// Debug the environment
+console.log('DB Config: Running in environment:', process.env.NODE_ENV);
+console.log('DB Config: Current directory:', __dirname);
+console.log('DB Config: Process CWD:', process.cwd());
+
 // Load environment variables with multiple fallback mechanisms
 // First load from process root (for Render and other deployment platforms)
 dotenv.config();
+console.log('DB Config: Loaded root environment variables');
 
 // Then try to load from the backend directory
 const backendEnvPath = path.resolve(__dirname, '../../.env');
@@ -32,9 +38,24 @@ if (fs.existsSync(evaluationEnvPath)) {
   console.warn(`DB Config: Warning: .env file not found at ${evaluationEnvPath}, using environment variables from parent directories or deployment platform`);
 }
 
+// Debug: List all environment variables starting with EVALUATION_ 
+console.log('DB Config: Checking for prefixed environment variables:');
+let hasPrefixedVars = false;
+Object.keys(process.env).forEach(key => {
+  if (key.startsWith('EVALUATION_')) {
+    console.log(`- Found ${key}`);
+    hasPrefixedVars = true;
+  }
+});
+if (!hasPrefixedVars) {
+  console.warn('DB Config: No EVALUATION_ prefixed variables found');
+}
+
 // Check for prefixed environment variables (from main backend .env)
 // This helps with deployment platforms where all variables are in a single environment
+console.log('DB Config: Checking if we need to use prefixed environment variables');
 if (!process.env.PGUSER && process.env.EVALUATION_PGUSER) {
+  console.log('DB Config: Using prefixed environment variables from EVALUATION_ prefix');
   process.env.PGUSER = process.env.EVALUATION_PGUSER;
   process.env.PGPASSWORD = process.env.EVALUATION_PGPASSWORD;
   process.env.PGHOST = process.env.EVALUATION_PGHOST;
@@ -42,8 +63,28 @@ if (!process.env.PGUSER && process.env.EVALUATION_PGUSER) {
   process.env.PGPORT = process.env.EVALUATION_PGPORT;
   process.env.PGSSL = process.env.EVALUATION_PGSSL;
   process.env.DATABASE_URL = process.env.EVALUATION_DATABASE_URL;
+} else if (!process.env.PGUSER) {
+  // Still no database variables found? Try with explicit fallbacks
+  console.log('DB Config: No database variables found. Setting explicit values from environment or defaults');
   
-  console.log('Using prefixed environment variables from main backend .env file');
+  // RENDER-SPECIFIC VARIABLES: Render might have set these directly
+  if (process.env.RENDER_DATABASE_URL) {
+    console.log('DB Config: Found RENDER_DATABASE_URL, using that');
+    process.env.DATABASE_URL = process.env.RENDER_DATABASE_URL;
+  }
+  
+  // LAST RESORT: Set hard-coded values from the RENDER_DEPLOYMENT.md
+  // Only use this if we're on Render and have no other options
+  if (process.env.RENDER && !process.env.PGUSER && !process.env.DATABASE_URL) {
+    console.log('DB Config: Setting hard-coded database values as last resort');
+    process.env.PGUSER = 'neondb_owner';
+    process.env.PGPASSWORD = 'npg_eSz8JNlO0xcD';
+    process.env.PGHOST = 'ep-divine-smoke-a138jirw-pooler.ap-southeast-1.aws.neon.tech';
+    process.env.PGDATABASE = 'neondb';
+    process.env.PGPORT = '5432';
+    process.env.PGSSL = 'true';
+    process.env.DATABASE_URL = 'postgresql://neondb_owner:npg_eSz8JNlO0xcD@ep-divine-smoke-a138jirw-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require';
+  }
 }
 
 // Debug: Log loaded database configuration variables
@@ -55,18 +96,38 @@ console.log(`- PGDATABASE: ${process.env.PGDATABASE || 'Not set'}`);
 console.log(`- PGPORT: ${process.env.PGPORT || '5432 (default)'}`);
 console.log(`- DATABASE_URL: ${process.env.DATABASE_URL ? '✅ Set' : '❌ Not set'}`);
 
+// Additional debug: Check render-specific env vars
+if (process.env.RENDER) {
+  console.log('DB Config: Running on Render platform');
+  console.log(`- RENDER_EXTERNAL_URL: ${process.env.RENDER_EXTERNAL_URL || 'Not set'}`);
+  console.log(`- RENDER_SERVICE_ID: ${process.env.RENDER_SERVICE_ID || 'Not set'}`);
+}
+
 // Maximum number of connection retries
 const MAX_RETRIES = 5;
 const RETRY_DELAY = 5000; // 5 seconds
 
 // Validate required database environment variables
-const requiredDBVars = ['PGUSER', 'PGPASSWORD', 'PGHOST', 'PGDATABASE'];
-requiredDBVars.forEach(varName => {
-  if (!process.env[varName]) {
-    console.error(`Error: Required database environment variable ${varName} is not set`);
+// Only if we're not using the DATABASE_URL
+if (!process.env.DATABASE_URL) {
+  console.log('DB Config: Validating individual database parameters');
+  const requiredDBVars = ['PGUSER', 'PGPASSWORD', 'PGHOST', 'PGDATABASE'];
+  let missingVars = [];
+  
+  requiredDBVars.forEach(varName => {
+    if (!process.env[varName]) {
+      console.error(`Error: Required database environment variable ${varName} is not set`);
+      missingVars.push(varName);
+    }
+  });
+  
+  if (missingVars.length > 0) {
+    console.error(`Error: Missing required database variables: ${missingVars.join(', ')}`);
     process.exit(1);
   }
-});
+} else {
+  console.log('DB Config: Using DATABASE_URL for connection, no need to validate individual parameters');
+}
 
 // Environment-specific pool configuration
 const poolConfigs = {
@@ -83,47 +144,62 @@ const poolConfigs = {
   production: {
     max: parseInt(process.env.PG_MAX_CONNECTIONS || '20'),
     idleTimeoutMillis: parseInt(process.env.PG_IDLE_TIMEOUT || '30000'),
-    connectionTimeoutMillis: parseInt(process.env.PG_CONNECTION_TIMEOUT || '2000'),
+    connectionTimeoutMillis: parseInt(process.env.PG_CONNECTION_TIMEOUT || '5000'), // Increased for production
   }
 };
 
 // Select the appropriate pool config based on environment
-const poolConfig = poolConfigs[process.env.NODE_ENV || 'development'];
+const nodeEnv = process.env.NODE_ENV || 'development';
+console.log(`DB Config: Using pool configuration for ${nodeEnv} environment`);
+const poolConfig = poolConfigs[nodeEnv];
 
 // Get connection retries from environment or default to 3
 const CONNECTION_RETRIES = parseInt(process.env.PG_CONNECTION_RETRIES || '3');
 
-// Load database configuration from environment variables
-const dbConfig = {
-  user: process.env.PGUSER,
-  host: process.env.PGHOST,
-  database: process.env.PGDATABASE,
-  password: process.env.PGPASSWORD,
-  port: parseInt(process.env.PGPORT || '5432'),
-  // Connection pool configuration
-  ...poolConfig,
-  // Add SSL configuration for Neon
-  ssl: process.env.PGSSL === 'true' ? {
-    rejectUnauthorized: true
-  } : undefined
-};
+// Connect to the database - prefer DATABASE_URL if available
+let pool;
+let dbConfig = {};
+
+if (process.env.DATABASE_URL) {
+  console.log('DB Config: Creating pool using DATABASE_URL');
+  pool = new Pool({ 
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.PGSSL === 'true' ? { rejectUnauthorized: true } : undefined,
+    ...poolConfig
+  });
+  
+  dbConfig = {
+    connectionString: `${process.env.DATABASE_URL.substring(0, 25)}...`,
+    ssl: process.env.PGSSL === 'true' ? 'enabled' : 'disabled',
+    ...poolConfig
+  };
+} else {
+  console.log('DB Config: Creating pool using individual parameters');
+  // Load database configuration from environment variables
+  dbConfig = {
+    user: process.env.PGUSER,
+    host: process.env.PGHOST,
+    database: process.env.PGDATABASE,
+    password: process.env.PGPASSWORD,
+    port: parseInt(process.env.PGPORT || '5432'),
+    // Connection pool configuration
+    ...poolConfig,
+    // Add SSL configuration for Neon
+    ssl: process.env.PGSSL === 'true' ? {
+      rejectUnauthorized: true
+    } : undefined
+  };
+  
+  pool = new Pool(dbConfig);
+}
 
 // Log database configuration with hidden password
 console.log('Database configuration:', {
   ...dbConfig,
-  password: '********', // Hide password in logs
+  password: dbConfig.password ? '********' : undefined, // Hide password in logs
   connectionTimeoutMillis: poolConfig.connectionTimeoutMillis,
   retries: CONNECTION_RETRIES
 });
-
-// Alternative: Use the DATABASE_URL directly if provided
-const pool = process.env.DATABASE_URL 
-  ? new Pool({ 
-      connectionString: process.env.DATABASE_URL,
-      ssl: process.env.PGSSL === 'true' ? { rejectUnauthorized: true } : undefined,
-      ...poolConfig
-    }) 
-  : new Pool(dbConfig);
 
 // Log connection information
 console.log('Evaluation System DB connection information:');
@@ -132,8 +208,8 @@ if (process.env.DATABASE_URL) {
 } else {
   console.log('- Using individual connection parameters');
 }
-console.log(`- Connected to database: ${dbConfig.database} on host: ${dbConfig.host}`);
-console.log(`- SSL enabled: ${process.env.PGSSL === 'true' ? 'Yes' : 'No'}`);
+console.log(`- Connected to database: ${dbConfig.database || 'via connection string'} on host: ${dbConfig.host || 'via connection string'}`);
+console.log(`- SSL enabled: ${process.env.PGSSL === 'true' || dbConfig.ssl ? 'Yes' : 'No'}`);
 
 // Add event listeners for the pool
 pool.on('connect', () => {
