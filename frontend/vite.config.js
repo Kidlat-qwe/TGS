@@ -14,6 +14,10 @@ export default defineConfig(({ command, mode }) => {
   // Detect environment
   const isProduction = mode === 'production' || process.env.NODE_ENV === 'production'
   
+  // Get the backend URL from environment variables or use default
+  const backendUrl = env.BACKEND_URL || process.env.BACKEND_URL || 'http://localhost:5000'
+  console.log(`Using backend URL: ${backendUrl}`)
+  
   // Define allowed hosts - include Render domains and any from env
   const allowedHosts = [
     'localhost', 
@@ -35,6 +39,7 @@ export default defineConfig(({ command, mode }) => {
     define: {
       'import.meta.env.VITE_IS_PRODUCTION': JSON.stringify(isProduction),
       'import.meta.env.VITE_API_BASE': JSON.stringify('/api'),
+      'import.meta.env.VITE_BACKEND_URL': JSON.stringify(backendUrl),
       // Add the allowed hosts to the build
       'import.meta.env.VITE_ALLOWED_HOSTS': JSON.stringify(allowedHosts.join(','))
     },
@@ -47,8 +52,10 @@ export default defineConfig(({ command, mode }) => {
       host: true,
       proxy: {
         '/api': {
-          target: 'http://localhost:5000',
+          target: backendUrl,
           changeOrigin: true,
+          secure: false,
+          rewrite: (path) => path.replace(/^\/api/, '/api')
         }
       },
       // Use the allowed hosts array
